@@ -25,18 +25,10 @@ Based on the general SEA representation, the distinct power (`$\Pi$`) components
 This relationship can be visualized as following:
 
 ```mermaid
-flowchart LR
-    %% Subsystem 1
-    Pin1(("Pi_in^(1)")) --> S1["Subsystem 1<br>Energy: E_1"]
-    S1 --> Pdiss1(("Pi_diss^(1) = η_1 ω E_1"))
-    
-    %% Subsystem 2
-    Pin2(("Pi_in^(2)")) --> S2["Subsystem 2<br>Energy: E_2"]
-    S2 --> Pdiss2(("Pi_diss^(2) = η_2 ω E_2"))
-    
-    %% Coupling
-    S1 -- "Pi_12 = η_12 ω E_1" --> S2
-    S2 -- "Pi_21 = η_21 ω E_2" --> S1
+graph TD
+    P1["Pi_in^(1)"] --> S1["Subsystem 1  (Dissipation: Pi_diss^(1) = η_1 ω E_1)"]
+    P2["Pi_in^(2)"] --> S2["Subsystem 2  (Dissipation: Pi_diss^(2) = η_2 ω E_2)"]
+    S1 <-->|"Power Flow"| S2
 ```
 
 Writing out the balance for both subsystems and rearranging for the external input powers yields the standard SEA matrix formulation:
