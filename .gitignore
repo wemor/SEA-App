@@ -1,0 +1,7 @@
+*.pdf
+*.txt
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+docs/assets/img_*
