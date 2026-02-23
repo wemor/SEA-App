@@ -41,7 +41,7 @@ E_2
 *   $\Pi_{in,i}$ = Input power to subsystem $i$ ($\text{Watts}$)
 
 ```mermaid
-graph LR
+graph TD
     P1(("Pi_in,1")) --> S1["Subsystem 1<br>(Dissipation: Pi_diss,1)"]
     P2(("Pi_in,2")) --> S2["Subsystem 2<br>(Dissipation: Pi_diss,2)"]
     S1 -- "Power Flow" --> S2
