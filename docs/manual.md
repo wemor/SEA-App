@@ -24,12 +24,7 @@ Based on the general SEA representation, the distinct power (`$\Pi$`) components
 
 This relationship can be visualized as following:
 
-```mermaid
-graph TD
-    P1["Pi_in^(1)"] --> S1["Subsystem 1  (Dissipation: Pi_diss^(1) = η_1 ω E_1)"]
-    P2["Pi_in^(2)"] --> S2["Subsystem 2  (Dissipation: Pi_diss^(2) = η_2 ω E_2)"]
-    S1 <-->|"Power Flow"| S2
-```
+![SEA Power Balance Diagram](assets/sea_power_balance.png)
 
 Writing out the balance for both subsystems and rearranging for the external input powers yields the standard SEA matrix formulation:
 
