@@ -41,15 +41,11 @@ $$
 *   $\Pi_{in,i}$ = Input power to subsystem $i$ ($\text{Watts}$)
 
 ```mermaid
-block-beta
-  columns 3
-  
-  space In1(("Pi_in,1")) space
-  Sub1["Subsystem 1\nDissipation: Pi_diss,1"] right<"Pi_12"> Sub2["Subsystem 2\nDissipation: Pi_diss,2"]
-  space In2(("Pi_in,2")) space
-  
-  In1 --> Sub1
-  In2 --> Sub2
+graph LR
+    P1(("Pi_in,1")) --> S1["Subsystem 1<br>(Dissipation: Pi_diss,1)"]
+    P2(("Pi_in,2")) --> S2["Subsystem 2<br>(Dissipation: Pi_diss,2)"]
+    S1 -- "Power Flow" --> S2
+    S2 -- "Power Flow" --> S1
 ```
 
 #### N-Subsystem Power Balance
@@ -81,10 +77,16 @@ $$
 ### 2.3 Coupling Loss Factor (Appendix C)
 The coupling from a vibrating structure to an acoustic cavity is calculated via radiation resistance ($R_{rad}$):
 
-$$ \eta_{struct \rightarrow cavity} = \frac{\rho_0 C_0 A \sigma_{rad}}{M \omega} $$
+$$ 
+\eta_{struct \rightarrow cavity} = \frac{\rho_0 C_0 A \sigma_{rad}}{M \omega} 
+$$
 
 The reverse coupling from the cavity back to the structure relies on the SEA consistency relationship:
-$$ \eta_{cavity \rightarrow struct} = \eta_{struct \rightarrow cavity} \frac{n_{struct}}{n_{cavity}} $$
+
+$$ 
+\eta_{cavity \rightarrow struct} = \eta_{struct \rightarrow cavity} \frac{n_{struct}}{n_{cavity}} 
+$$
+
 where $n_i$ is the modal density.
 
 ---
