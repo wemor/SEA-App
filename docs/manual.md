@@ -14,7 +14,32 @@ SEA makes several key assumptions regarding the modeled system:
 ### 1.2 Power Flow Equations
 
 #### Basic Power Flow (Two Subsystems)
-For a system consisting of two connected subsystems, power flows in both directions. The total energy $E_i$ in subsystem $i$ is calculated using the power balance matrix equation:
+For a system consisting of two connected subsystems, power flows in both directions. The fundamental energy balance for each subsystem in steady-state is:
+**Power In + Power from other subsystems = Power Dissipated + Power to other subsystems**
+
+Based on the general SEA representation, the distinct power (`$\Pi$`) components are:
+*   **Input Power**: $\Pi_{\text{in}}^{(i)}$
+*   **Internal Dissipation**: $\Pi_{\text{diss}}^{(i)} = \eta_i \omega E_i$
+*   **Coupled Power Flow** (from $i$ to $j$): $\Pi_{ij} = \eta_{ij} \omega E_i$
+
+This relationship can be visualized as following:
+
+```mermaid
+flowchart LR
+    %% Subsystem 1
+    Pin1(("Pi_in^(1)")) --> S1["Subsystem 1<br>Energy: E_1"]
+    S1 --> Pdiss1(("Pi_diss^(1) = η_1 ω E_1"))
+    
+    %% Subsystem 2
+    Pin2(("Pi_in^(2)")) --> S2["Subsystem 2<br>Energy: E_2"]
+    S2 --> Pdiss2(("Pi_diss^(2) = η_2 ω E_2"))
+    
+    %% Coupling
+    S1 -- "Pi_12 = η_12 ω E_1" --> S2
+    S2 -- "Pi_21 = η_21 ω E_2" --> S1
+```
+
+Writing out the balance for both subsystems and rearranging for the external input powers yields the standard SEA matrix formulation:
 
 ```math
 \omega
@@ -28,23 +53,9 @@ E_2
 \end{bmatrix}
 =
 \begin{bmatrix}
-\Pi_{in,1} \\
-\Pi_{in,2}
+\Pi_{\text{in}}^{(1)} \\
+\Pi_{\text{in}}^{(2)}
 \end{bmatrix}
-```
-
-**Where:**
-*   $\omega$ = Band center angular frequency ($\text{rad/sec}$)
-*   $\eta_i$ = Internal dissipation loss factor of subsystem $i$
-*   $\eta_{ij}$ = Coupling loss factor from subsystem $i$ to $j$
-*   $E_i$ = Total kinetic energy in subsystem $i$ ($\text{Joules}$)
-*   $\Pi_{in,i}$ = Input power to subsystem $i$ ($\text{Watts}$)
-
-```mermaid
-flowchart TD
-    P1(("Pi_in,1")) --> S1["Subsystem 1<br>(Dissipation: Pi_diss,1)"]
-    P2(("Pi_in,2")) --> S2["Subsystem 2<br>(Dissipation: Pi_diss,2)"]
-    S1 <-->|"Power Flow"| S2
 ```
 
 #### N-Subsystem Power Balance
