@@ -16,7 +16,7 @@ SEA makes several key assumptions regarding the modeled system:
 #### Basic Power Flow (Two Subsystems)
 For a system consisting of two connected subsystems, power flows in both directions. The total energy $E_i$ in subsystem $i$ is calculated using the power balance matrix equation:
 
-$$
+```math
 \omega
 \begin{bmatrix}
 \eta_1 + \eta_{12} & -\eta_{21} \\
@@ -31,7 +31,7 @@ E_2
 \Pi_{in,1} \\
 \Pi_{in,2}
 \end{bmatrix}
-$$
+```
 
 **Where:**
 *   $\omega$ = Band center angular frequency ($\text{rad/sec}$)
@@ -62,30 +62,30 @@ The architecture calculates required physical parameters dynamically based on th
 ### 2.1 Wave Speeds (Appendix A)
 For a homogeneous thin plate, the bending phase speed ($C_B$) depends on the frequency $\omega$:
 
-$$
+```math
 C_B = \sqrt{\omega} \left( \frac{B}{m^{\prime\prime}} \right)^{1/4}
-$$
+```
 where $B = \frac{E \cdot h^3}{12 (1 - \nu^2)}$ is the flexural rigidity, and $m^{\prime\prime}$ is the mass per unit area.
 
 ### 2.2 Critical Frequency (Appendix B)
 The critical frequency ($f_c$) is where the structural bending wave speed equals the acoustic wave speed in the surrounding medium ($C_0$).
 
-$$
+```math
 f_c = \frac{C_0^2}{2\pi h} \sqrt{ \frac{12 \rho (1-\nu^2)}{E} }
-$$
+```
 
 ### 2.3 Coupling Loss Factor (Appendix C)
 The coupling from a vibrating structure to an acoustic cavity is calculated via radiation resistance ($R_{rad}$):
 
-$$ 
+```math
 \eta_{struct \rightarrow cavity} = \frac{\rho_0 C_0 A \sigma_{rad}}{M \omega} 
-$$
+```
 
 The reverse coupling from the cavity back to the structure relies on the SEA consistency relationship:
 
-$$ 
+```math
 \eta_{cavity \rightarrow struct} = \eta_{struct \rightarrow cavity} \frac{n_{struct}}{n_{cavity}} 
-$$
+```
 
 where $n_i$ is the modal density.
 
