@@ -23,8 +23,7 @@ Based on the general SEA representation, the distinct power (`$\Pi$`) components
 *   **Coupled Power Flow** (from $i$ to $j$): $\Pi_{ij} = \eta_{ij} \omega E_i$
 
 This relationship can be visualized as following:
-
-![SEA Power Balance Diagram](assets/sea_power_balance.png)
+<img src="assets/sea_power_balance.png" alt="SEA Power Balance Diagram" width="600" />
 
 Writing out the balance for both subsystems and rearranging for the external input powers yields the standard SEA matrix formulation:
 
