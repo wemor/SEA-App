@@ -202,9 +202,32 @@ energies = sea.solve(frequency=500.0)
 *   **Room 3**: Receiving room ($V=72 m^3$).
 
 ### 4.2 The Solution Approach
-The script sets up the 3x3 SEA matrix representing these three coupled subsystems. The user's original `MathCAD` calculation solved this using a simplified cascade approach (ignoring back-coupling, i.e., energy flowing from Room 3 back to the Wall, or Wall back to Room 1). 
+The script compares two mathematical approaches for calculating the energy flow through the 3 subsystems:
 
-By executing the `sea_app` matrix solver on this system, we prove that the full, mathematically rigorous matrix solution yields the exact same pressure and velocity levels as the simplified hand-calculations:
+#### 1. "Pfade im SEA Modell" (The Exact Matrix Solution)
+The mathematically rigorous SEA model considers all forward and backward power flows between all coupled systems. The power balance equations for the three nodes are:
+
+```math
+\begin{align*}
+\text{Room 1: } & \Pi_{\text{in},1} + \omega \eta_{21} E_2 + \omega \eta_{31} E_3 = \omega \eta_1 E_1 + \omega \eta_{12} E_1 + \omega \eta_{13} E_1 \\
+\text{Wall 2: } & \omega \eta_{12} E_1 + \omega \eta_{32} E_3 = \omega \eta_2 E_2 + \omega \eta_{21} E_2 + \omega \eta_{23} E_2 \\
+\text{Room 3: } & \omega \eta_{13} E_1 + \omega \eta_{23} E_2 = \omega \eta_3 E_3 + \omega \eta_{31} E_3 + \omega \eta_{32} E_3
+\end{align*}
+```
+The `SEASystem.solve()` method automatically constructs and solves this complete system of equations via matrix inversion.
+
+#### 2. "Vereinfachung" (The Simplified Cascade)
+The original `MathCAD` calculation solved this using a simplified cascade approach. This "Vereinfachung" ignores the comparatively weak back-coupling (e.g., energy flowing from Room 3 back to the Wall, or Wall back to Room 1). The equations simplify to a direct feed-forward sequence:
+
+```math
+\begin{align*}
+\text{Room 1: } & \Pi_{\text{in},1} = \omega \eta_1 E_1 \\
+\text{Wall 2: } & \omega \eta_{12} E_1 = \omega \eta_2 E_2 \\
+\text{Room 3: } & \omega \eta_{13} E_1 + \omega \eta_{23} E_2 = \omega \eta_3 E_3
+\end{align*}
+```
+
+By executing `myExample.py`, we prove that the full, rigorous matrix solution yields the exact same pressure and velocity levels as these simplified hand-calculations:
 
 *   **Sound Pressure Level (Room 3)**: $69.6 \text{ dB}$
 *   **Wall Velocity**: $3.4 \cdot 10^{-6} \text{ m/s}$
