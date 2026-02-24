@@ -97,12 +97,9 @@ if "pending_load" in st.session_state:
                 else:
                     st.session_state[k] = str(v)
             
-            # Apply to widget UI variables        
+            # Delete stale UI variables so widgets re-initialize with new global values        
             if ui_key in st.session_state:
-                if isinstance(st.session_state[ui_key], float) or isinstance(st.session_state[ui_key], int):
-                    st.session_state[ui_key] = float(v)
-                else:
-                    st.session_state[ui_key] = str(v)
+                del st.session_state[ui_key]
                     
     del st.session_state.pending_load
 
