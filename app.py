@@ -12,64 +12,6 @@ st.set_page_config(page_title="SEA App", page_icon="🌊", layout="wide")
 st.markdown(
     """
     <style>
-    /* Global Streamlit Background Overrides */
-    .stApp {
-        background-color: #0d1117;
-        color: #e6edf3;
-        font-family: 'Inter', system-ui, sans-serif;
-    }
-    
-    /* Sidebar Overrides */
-    [data-testid="stSidebar"] {
-        background-color: #21262d;
-        border-right: 1px solid #30363d;
-    }
-    [data-testid="stSidebar"] * {
-        color: #e6edf3 !important;
-    }
-    
-    /* Headings */
-    h1, h2, h3, h4, h5, h6 {
-        color: #e6edf3 !important;
-    }
-
-    /* Cards/Containers in Streamlit */
-    [data-testid="stVerticalBlock"] > div[style*="border"] {
-        background-color: #161b22;
-        border-color: #30363d !important;
-        border-radius: 12px;
-    }
-
-    /* Buttons */
-    .stButton > button {
-        background-color: #161b22;
-        color: #e6edf3;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        transition: all 0.2s;
-    }
-    .stButton > button:hover {
-        border-color: #58a6ff;
-        color: #58a6ff;
-    }
-
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background-color: #161b22;
-        border-radius: 6px;
-    }
-
-    /* Inputs */
-    .stNumberInput input {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        color: #e6edf3 !important;
-        border: 1px solid #30363d !important;
-    }
-    .stNumberInput input:focus {
-        border-color: #58a6ff !important;
-        box-shadow: 0 0 0 1px #58a6ff !important;
-    }
-
     /* Simulated Toolbar */
     .toolbar-container {
         display: flex;
