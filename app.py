@@ -82,26 +82,31 @@ for k, v in defaults.items():
         if k == "project_name": ui_key = "pname_ui"
         st.session_state[ui_key] = v
 
-# Handle pending JSON loads BEFORE any widgets instantiate
-if "pending_load" in st.session_state:
-    loaded_data = st.session_state.pending_load
-    for section, params in loaded_data.items():
-        for k, v in params.items():
-            ui_key = f"{k}_ui"
-            if k == "project_name": ui_key = "pname_ui"
-            
-            # Apply to global variables
-            if k in st.session_state:
-                if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
-                    st.session_state[k] = float(v)
-                else:
-                    st.session_state[k] = str(v)
-            
-            # Delete stale UI variables so widgets re-initialize with new global values        
-            if ui_key in st.session_state:
-                del st.session_state[ui_key]
+# Load Project Callback
+def load_project_callback():
+    uploaded_file = st.session_state.get("uploaded_project_file")
+    if uploaded_file is not None:
+        try:
+            uploaded_file.seek(0)
+            loaded_data = json.load(uploaded_file)
+            for section, params in loaded_data.items():
+                for k, v in params.items():
+                    ui_key = f"{k}_ui"
+                    if k == "project_name": ui_key = "pname_ui"
                     
-    del st.session_state.pending_load
+                    # Safely apply to global variables
+                    if k in st.session_state:
+                         st.session_state[k] = float(v) if isinstance(v, (int, float)) else str(v)
+                    
+                    # Safely apply to widget UI keys directly (because this runs inside a callback!)
+                    if ui_key in st.session_state:
+                         st.session_state[ui_key] = float(v) if isinstance(v, (int, float)) else str(v)
+                         
+            st.session_state.load_success = True
+            st.session_state.load_error = None
+        except Exception as e:
+            st.session_state.load_success = False
+            st.session_state.load_error = str(e)
 
 if "current_view" not in st.session_state:
     st.session_state.current_view = "Visualization"
@@ -307,21 +312,14 @@ with col_main:
             
         with f_col2:
             st.markdown("#### Load Project")
-            uploaded_file = st.file_uploader("Upload a saved `.json` project file", type="json")
-            if uploaded_file is not None:
-                file_id = f"{uploaded_file.name}_{uploaded_file.size}"
-                if "loaded_file_id" not in st.session_state or st.session_state.loaded_file_id != file_id:
-                    try:
-                        st.session_state.pending_load = json.load(uploaded_file)
-                        st.session_state.loaded_file_id = file_id
-                        st.success("Project loaded successfully!")
-                        st.info("Check the Model Elements tree to verify properties.")
-                        st.rerun()  # Force Streamlit to apply the pending load at the top of the script
-                    except Exception as e:
-                        st.error(f"Failed to load file. Error: {e}")
-                else:
-                    st.success("Project loaded successfully!")
-                    st.info("Check the Model Elements tree to verify properties.")
+            st.file_uploader("Upload a saved `.json` project file", type="json", key="uploaded_project_file", on_change=load_project_callback)
+            
+            # Display status after callback execution
+            if st.session_state.get("load_success"):
+                st.success("Project loaded successfully!")
+                st.info("Check the Model Elements tree to verify properties.")
+            elif st.session_state.get("load_error"):
+                st.error(f"Failed to load file. Error: {st.session_state.load_error}")
 
     elif st.session_state.current_view == "Visualization":
         # Graph Visualization
