@@ -3,6 +3,7 @@ import numpy as np
 import math
 import graphviz
 import json
+import time
 
 # Import sea_app core functions
 from sea_app.core.system import SEASystem
@@ -66,17 +67,22 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Initialize Session State Defaults
-defaults = {
-    "project_name": "Project xxxxxxxx",
-    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
-    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
-    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
-    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+# Initialize Session State Defaults (Phase 2 Dynamic Elements)
+if "project_name" not in st.session_state:
+    st.session_state.project_name = "Project xxxxxxxx"
+    st.session_state.freq = 500.0
+    st.session_state.rho0 = 1.204
+    st.session_state.c0 = 343.0
+
+if "elements" not in st.session_state:
+    st.session_state.elements = [
+        {"id": "c1", "type": "Cavity", "name": "Room 1 (Source)", "volume": 60.0, "surface": 12.0, "t60": 0.6, "power": 0.005},
+        {"id": "w2", "type": "Wall", "name": "Wall 2 (Division)", "surface": 12.0, "density": 200.0, "fc": 150.0, "sigma": 1.0, "eta": 0.05},
+        {"id": "c3", "type": "Cavity", "name": "Room 3 (Receiving)", "volume": 72.0, "surface": 12.0, "t60": 0.7, "power": 0.0}
+    ]
+
+if "junctions" not in st.session_state:
+    st.session_state.junctions = []
 
 # Load Project Callback
 def load_project_callback():
@@ -85,12 +91,22 @@ def load_project_callback():
         try:
             uploaded_file.seek(0)
             loaded_data = json.load(uploaded_file)
-            for section, params in loaded_data.items():
-                for k, v in params.items():
-                    # Apply to global variables
+            
+            # Load Global parameters
+            if "global" in loaded_data:
+                for k, v in loaded_data["global"].items():
                     if k in st.session_state:
                          st.session_state[k] = float(v) if isinstance(v, (int, float)) else str(v)
-                         
+            
+            # Load elements array
+            if "elements" in loaded_data:
+                st.session_state.elements = loaded_data["elements"]
+                
+                # Make sure the current selected element still exists, otherwise reset
+                valid_names = [el["name"] for el in st.session_state.elements]
+                if st.session_state.get("selected_element") not in valid_names and st.session_state.get("selected_element") != "🌍 Global Setup":
+                     st.session_state.selected_element = "🌍 Global Setup"
+
             st.session_state.load_success = True
             st.session_state.load_error = None
         except Exception as e:
@@ -129,29 +145,20 @@ if "selected_element" not in st.session_state:
     st.session_state.selected_element = "🌍 Global Setup"
 
 with st.sidebar.expander("[-] Model Elements", expanded=True):
-    # Interactive tree using a styling hack for a radio button
-    tree_options = [
-        "🌍 Global Setup",
-        "├─ Room 1 (Source)",
-        "├─ Wall 2 (Partition)",
-        "└─ Room 3 (Receiving)"
-    ]
+    # Dynamic tree generation
+    tree_options = ["🌍 Global Setup"]
+    for i, el in enumerate(st.session_state.elements):
+        prefix = "└─ " if i == len(st.session_state.elements) - 1 else "├─ "
+        tree_options.append(f"{prefix}{el['name']}")
     
-    selected_option = st.radio(
-        "Select Element to Edit:", 
-        tree_options, 
-        label_visibility="collapsed"
-    )
+    selected_option = st.radio("Select Element to Edit:", tree_options, label_visibility="collapsed")
 
     # Map visual tree options back to logical IDs
-    if "Global Setup" in selected_option:
-        st.session_state.selected_element = "🌍 Global Setup"
-    elif "Room 1" in selected_option:
-        st.session_state.selected_element = "Room 1 (Source)"
-    elif "Wall 2" in selected_option:
-        st.session_state.selected_element = "Wall 2 (Division)"
-    elif "Room 3" in selected_option:
-        st.session_state.selected_element = "Room 3 (Receiving)"
+    st.session_state.selected_element = "🌍 Global Setup"
+    for el in st.session_state.elements:
+        if el['name'] in selected_option:
+            st.session_state.selected_element = el['name']
+            break
 
 
 st.sidebar.markdown("---")
@@ -160,6 +167,16 @@ st.sidebar.markdown(f"#### Edit: {st.session_state.selected_element}")
 # Input Parameters - Conditionally Displayed based on Selection
 # We still need to keep the values in session state or default variables to calculate the graph!
 # In a real app we'd load this from a project dict, here we use Streamlit keys and defaults.
+
+# DYNAMIC PROPERTIES EDITOR
+# Find the currently selected element dictionary
+active_el = None
+active_el_idx = None
+for i, el in enumerate(st.session_state.elements):
+    if el['name'] == st.session_state.selected_element:
+        active_el = el
+        active_el_idx = i
+        break
 
 if st.session_state.selected_element == "🌍 Global Setup":
     with st.sidebar:
@@ -174,56 +191,51 @@ if st.session_state.selected_element == "🌍 Global Setup":
     st.session_state.rho0 = rho0
     st.session_state.c0 = c0
 
-elif st.session_state.selected_element == "Room 1 (Source)":
+elif active_el is not None:
     with st.sidebar:
-        st.markdown("**Geometric Properties**")
-        V1 = st.number_input("Volume (m³)", value=float(st.session_state.v1))
-        S1 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s1))
-        st.markdown("**Acoustic Properties**")
-        T60_1 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_1))
-        st.markdown("**Excitation**")
-        P1 = st.number_input("Input Power P1 (W)", value=float(st.session_state.p1), format="%.4f")
-    
-    st.session_state.v1 = V1
-    st.session_state.s1 = S1
-    st.session_state.t60_1 = T60_1
-    st.session_state.p1 = P1
+        # Edit Name
+        st.markdown("**General Properties**")
+        new_name = st.text_input("Element Name", value=active_el["name"])
+        st.session_state.elements[active_el_idx]["name"] = new_name
+        
+        if active_el["type"] == "Cavity":
+            st.markdown("**Geometric Properties**")
+            st.session_state.elements[active_el_idx]["volume"] = st.number_input("Volume (m³)", value=float(active_el["volume"]))
+            st.session_state.elements[active_el_idx]["surface"] = st.number_input("Coupling Surface (m²)", value=float(active_el["surface"]))
+            st.markdown("**Acoustic Properties**")
+            st.session_state.elements[active_el_idx]["t60"] = st.number_input("Rev Time (s)", value=float(active_el["t60"]))
+            st.markdown("**Excitation**")
+            st.session_state.elements[active_el_idx]["power"] = st.number_input("Input Power P (W)", value=float(active_el["power"]), format="%.4f")
+            
+        elif active_el["type"] == "Wall":
+            st.markdown("**Geometric Properties**")
+            st.session_state.elements[active_el_idx]["surface"] = st.number_input("Surface (m²)", value=float(active_el["surface"]))
+            st.session_state.elements[active_el_idx]["density"] = st.number_input("Area Density (kg/m²)", value=float(active_el["density"]))
+            st.markdown("**Structural Properties**")
+            st.session_state.elements[active_el_idx]["fc"] = st.number_input("Critical Freq (Hz)", value=float(active_el["fc"]))
+            st.session_state.elements[active_el_idx]["sigma"] = st.number_input("Radiation Efficiency", value=float(active_el["sigma"]))
+            st.session_state.elements[active_el_idx]["eta"] = st.number_input("Internal Damping", value=float(active_el["eta"]))
 
-elif st.session_state.selected_element == "Wall 2 (Division)":
-    with st.sidebar:
-        st.markdown("**Geometric Properties**")
-        S2 = st.number_input("Surface (m²)", value=float(st.session_state.s2))
-        m_2 = st.number_input("Area Density (kg/m²)", value=float(st.session_state.m2))
-        st.markdown("**Structural Properties**")
-        fc_2 = st.number_input("Critical Freq (Hz)", value=float(st.session_state.fc2))
-        sigma2 = st.number_input("Radiation Efficiency", value=float(st.session_state.sig2))
-        eta2 = st.number_input("Internal Damping", value=float(st.session_state.eta2))
-    
-    st.session_state.s2 = S2
-    st.session_state.m2 = m_2
-    st.session_state.fc2 = fc_2
-    st.session_state.sig2 = sigma2
-    st.session_state.eta2 = eta2
-
-elif st.session_state.selected_element == "Room 3 (Receiving)":
-    with st.sidebar:
-        st.markdown("**Geometric Properties**")
-        V3 = st.number_input("Volume (m³)", value=float(st.session_state.v3))
-        S3 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s3))
-        st.markdown("**Acoustic Properties**")
-        T60_3 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_3))
-    
-    st.session_state.v3 = V3
-    st.session_state.s3 = S3
-    st.session_state.t60_3 = T60_3
 
 
 # Re-assign local variables for the calculation engine
+# Legacy Calculation Engine Adapter
+# Map dynamic elements array back to legacy variables until SEA engine is rebuilt
 project_name = st.session_state.project_name
 freq, rho0, c0 = float(st.session_state.freq), float(st.session_state.rho0), float(st.session_state.c0)
-V1, S1, T60_1, P1 = float(st.session_state.v1), float(st.session_state.s1), float(st.session_state.t60_1), float(st.session_state.p1)
-S2, m_2, fc_2, sigma2, eta2 = float(st.session_state.s2), float(st.session_state.m2), float(st.session_state.fc2), float(st.session_state.sig2), float(st.session_state.eta2)
-V3, S3, T60_3 = float(st.session_state.v3), float(st.session_state.s3), float(st.session_state.t60_3)
+
+# Default fallbacks
+V1, S1, T60_1, P1 = 60.0, 12.0, 0.6, 0.005
+S2, m_2, fc_2, sigma2, eta2 = 12.0, 200.0, 150.0, 1.0, 0.05
+V3, S3, T60_3 = 72.0, 12.0, 0.7
+
+for el in st.session_state.elements:
+    if el["id"] == "c1":
+        V1, S1, T60_1, P1 = el["volume"], el["surface"], el["t60"], el.get("power", 0.0)
+    elif el["id"] == "w2":
+        S2, m_2, fc_2, sigma2, eta2 = el["surface"], el["density"], el["fc"], el["sigma"], el["eta"]
+    elif el["id"] == "c3":
+        V3, S3, T60_3 = el["volume"], el["surface"], el["t60"]
 
 omega = 2 * math.pi * freq
 eta1 = 2.2 / (T60_1 * freq) if T60_1 > 0 else 0
@@ -284,9 +296,8 @@ with col_main:
             st.markdown("#### Save Project")
             current_state_dict = {
                 "global": {"project_name": project_name, "freq": freq, "rho0": rho0, "c0": c0},
-                "room_1": {"v1": V1, "s1": S1, "t60_1": T60_1, "p1": P1},
-                "wall_2": {"s2": S2, "m2": m_2, "fc2": fc_2, "sig2": sigma2, "eta2": eta2},
-                "room_3": {"v3": V3, "s3": S3, "t60_3": T60_3}
+                "elements": st.session_state.elements,
+                "junctions": st.session_state.junctions
             }
             json_string = json.dumps(current_state_dict, indent=2)
             
@@ -345,11 +356,30 @@ with col_main:
 
 with col_right:
     st.markdown("### 🧱 SEA Elements")
-    st.button("Cavity", use_container_width=True)
-    st.button("Wall", use_container_width=True)
-    st.button("Plate", use_container_width=True)
-    st.button("Beam", use_container_width=True)
-    st.button("Junction", use_container_width=True)
+    
+    if st.button("Cavity", use_container_width=True):
+        new_id = f"c_{int(time.time() * 1000)}"
+        new_name = f"Cavity {sum(1 for el in st.session_state.elements if el['type'] == 'Cavity') + 1}"
+        st.session_state.elements.append({
+            "id": new_id, "type": "Cavity", "name": new_name, 
+            "volume": 50.0, "surface": 10.0, "t60": 1.0, "power": 0.0
+        })
+        st.session_state.selected_element = new_name
+        st.rerun()
+        
+    if st.button("Wall", use_container_width=True):
+        new_id = f"w_{int(time.time() * 1000)}"
+        new_name = f"Wall {sum(1 for el in st.session_state.elements if el['type'] == 'Wall') + 1}"
+        st.session_state.elements.append({
+            "id": new_id, "type": "Wall", "name": new_name, 
+            "surface": 10.0, "density": 100.0, "fc": 250.0, "sigma": 1.0, "eta": 0.02
+        })
+        st.session_state.selected_element = new_name
+        st.rerun()
+        
+    st.button("Plate", use_container_width=True, disabled=True)
+    st.button("Beam", use_container_width=True, disabled=True)
+    st.button("Junction", use_container_width=True, disabled=True)
 
 
 # --- 5. Bottom Tool Messages (Fixed Footer) ---
