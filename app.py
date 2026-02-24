@@ -214,43 +214,10 @@ elif active_el is not None:
 
 
 
-# Re-assign local variables for the calculation engine
-# Legacy Calculation Engine Adapter
-# Map dynamic elements array back to legacy variables until SEA engine is rebuilt
-project_name = st.session_state.project_name
+# --- DYNAMIC CALCULATION ENGINE ---
+
 freq, rho0, c0 = float(st.session_state.freq), float(st.session_state.rho0), float(st.session_state.c0)
-
-# Default fallbacks (in case user hasn't created elements yet)
-V1, S1, T60_1, P1 = 60.0, 12.0, 0.6, 0.005
-S2, m_2, fc_2, sigma2, eta2 = 12.0, 200.0, 150.0, 1.0, 0.05
-V3, S3, T60_3 = 72.0, 12.0, 0.7
-
-# Find the first Cavity for Room 1, the first Wall for Wall 2, second Cavity for Room 3
-cavity_count, wall_count = 0, 0
-for el in st.session_state.elements:
-    if el["type"] == "Cavity":
-        cavity_count += 1
-        if cavity_count == 1:
-            V1, S1, T60_1, P1 = el["volume"], el["surface"], el["t60"], el.get("power", 0.0)
-        elif cavity_count == 2:
-            V3, S3, T60_3 = el["volume"], el["surface"], el["t60"]
-    elif el["type"] == "Wall":
-        wall_count += 1
-        if wall_count == 1:
-            S2, m_2, fc_2, sigma2, eta2 = el["surface"], el["density"], el["fc"], el["sigma"], el["eta"]
-
 omega = 2 * math.pi * freq
-eta1 = 2.2 / (T60_1 * freq) if T60_1 > 0 else 0
-eta3 = 2.2 / (T60_3 * freq) if T60_3 > 0 else 0
-
-# --- Calculation Engine (same as before) ---
-M2 = m_2 * S2
-eta12 = (rho0 * c0**2 * S2 * fc_2 * sigma2) / (8 * math.pi * V1 * m_2 * freq**3)
-eta21 = (rho0 * c0 * sigma2) / (2 * math.pi * freq * m_2)
-eta23 = eta21 
-tau13 = 0.01
-eta13 = (c0 * S1 * tau13) / (8 * math.pi * freq * V1)
-eta31 = (c0 * S3 * tau13) / (8 * math.pi * freq * V3)
 
 sea = SEASystem()
 
@@ -260,27 +227,113 @@ class DummySub:
         self.name = name
         self.loss_factor = eta
 
-idx1 = sea.add_subsystem(DummySub("Room 1", eta1))
-idx2 = sea.add_subsystem(DummySub("Wall 2", eta2))
-idx3 = sea.add_subsystem(DummySub("Room 3", eta3))
+# 1. Register Subsystems & Internal Loss Factors
+sys_indices = {} # Map our element string ID to SEASystem internal integer ID
 
-sea.set_coupling_loss_factor(idx1, idx2, eta12)
-sea.set_coupling_loss_factor(idx2, idx1, eta21)
-sea.set_coupling_loss_factor(idx2, idx3, eta23)
-sea.set_coupling_loss_factor(idx3, idx2, eta21)
-sea.set_coupling_loss_factor(idx1, idx3, eta13)
-sea.set_coupling_loss_factor(idx3, idx1, eta31)
-sea.set_power_input(idx1, P1)
+for el in st.session_state.elements:
+    eta_internal = 0.0
+    if el["type"] == "Cavity":
+        t60 = float(el["t60"])
+        eta_internal = 2.2 / (t60 * freq) if t60 > 0 else 0.0
+    elif el["type"] == "Wall":
+        eta_internal = float(el["eta"])
+        
+    sub = DummySub(el["name"], eta_internal)
+    idx = sea.add_subsystem(sub)
+    sys_indices[el["id"]] = idx
+    
+    # Register Power
+    if el["type"] == "Cavity" and el.get("power", 0.0) > 0:
+        sea.set_power_input(idx, float(el["power"]))
 
-energies = sea.solve(freq)
-E1, E2, E3 = energies
+# 2. Process Junctions (Coupling Loss Factors)
+for j in st.session_state.junctions:
+    src = next((e for e in st.session_state.elements if e["id"] == j["from"]), None)
+    recv = next((e for e in st.session_state.elements if e["id"] == j["to"]), None)
+    
+    if src and recv:
+        src_idx = sys_indices[src["id"]]
+        recv_idx = sys_indices[recv["id"]]
+        
+        eta_ij = 0.0
+        eta_ji = 0.0
+        
+        # Scenario A: Cavity to Wall
+        if src["type"] == "Cavity" and recv["type"] == "Wall":
+            S2 = float(recv["surface"])
+            fc_2 = float(recv["fc"])
+            sigma2 = float(recv["sigma"])
+            V1 = float(src["volume"])
+            m_2 = float(recv["density"])
+            
+            # Cavity -> Wall
+            if m_2 > 0 and V1 > 0:
+                eta_ij = (rho0 * c0**2 * S2 * fc_2 * sigma2) / (8 * math.pi * V1 * m_2 * freq**3)
+            # Wall -> Cavity (Reversible coupling)
+            if m_2 > 0:
+                eta_ji = (rho0 * c0 * sigma2) / (2 * math.pi * freq * m_2)
+                
+            sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
+            sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
+            
+        # Scenario B: Wall to Cavity
+        elif src["type"] == "Wall" and recv["type"] == "Cavity":
+            S2 = float(src["surface"])
+            fc_2 = float(src["fc"])
+            sigma2 = float(src["sigma"])
+            V3 = float(recv["volume"])
+            m_2 = float(src["density"])
+            
+            # Wall -> Cavity
+            if m_2 > 0:
+                eta_ij = (rho0 * c0 * sigma2) / (2 * math.pi * freq * m_2)
+            # Cavity -> Wall (Reversible coupling)
+            if m_2 > 0 and V3 > 0:
+                eta_ji = (rho0 * c0**2 * S2 * fc_2 * sigma2) / (8 * math.pi * V3 * m_2 * freq**3)
+                
+            sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
+            sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
+            
+        # Scenario C: Cavity to Cavity
+        elif src["type"] == "Cavity" and recv["type"] == "Cavity":
+            V1 = float(src["volume"])
+            V3 = float(recv["volume"])
+            # Assuming coupling surface S is tracked on the source cavity for now, or default
+            S_c = float(src.get("surface", 10.0)) 
+            tau = 0.01 # Hardcoded small opening for now
+            
+            if V1 > 0:
+                eta_ij = (c0 * S_c * tau) / (8 * math.pi * freq * V1)
+            if V3 > 0:
+                eta_ji = (c0 * S_c * tau) / (8 * math.pi * freq * V3)
+                
+            sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
+            sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
+            
+        # Scenario D: Wall to Wall
+        elif src["type"] == "Wall" and recv["type"] == "Wall":
+            pass # Explicitly blocked structure-borne transmission per user instruction
 
-p1 = math.sqrt(max(E1 * rho0 * c0**2 / V1, 1e-24))
-Lp1 = 20 * math.log10(max(p1 / 20e-6, 1e-12))
-v2 = math.sqrt(max(E2 / M2, 1e-24))
-Lv2 = 20 * math.log10(max(v2 / 5e-8, 1e-12))
-p3 = math.sqrt(max(E3 * rho0 * c0**2 / V3, 1e-24))
-Lp3 = 20 * math.log10(max(p3 / 20e-6, 1e-12))
+# 3. Solve SEA Matrix
+energies = []
+if len(sys_indices) > 0:
+    energies = sea.solve(freq)
+
+# 4. Map Results back to UI State
+st.session_state.results = {}
+for i, el in enumerate(st.session_state.elements):
+    E = energies[i] if i < len(energies) else 0.0
+    
+    if el["type"] == "Cavity":
+        V = float(el.get("volume", 50.0))
+        p = math.sqrt(max(E * rho0 * c0**2 / V, 1e-24))
+        Lp = 20 * math.log10(max(p / 20e-6, 1e-12))
+        st.session_state.results[el["id"]] = {"E": E, "L": Lp, "unit": "Lp (dB)"}
+    elif el["type"] == "Wall":
+        M = float(el.get("density", 100.0)) * float(el.get("surface", 10.0))
+        v = math.sqrt(max(E / M, 1e-24))
+        Lv = 20 * math.log10(max(v / 5e-8, 1e-12))
+        st.session_state.results[el["id"]] = {"E": E, "L": Lv, "unit": "Lv (dB)"}
 
 
 # --- 3. Main View & 4. Right Sidebar Area (Using Columns) ---
@@ -327,17 +380,24 @@ with col_main:
         graph = graphviz.Digraph()
         graph.attr(rankdir='LR')
         
-        # Draw Nodes
+        # Draw Nodes dynamically
         for el in st.session_state.elements:
-            short_id = el["id"][-4:] # Use last 4 chars of ID for node name
+            short_id = el["id"][-4:]
+            
+            # Retrieve node result if available
+            res_str = ""
+            if "results" in st.session_state and el["id"] in st.session_state.results:
+                res = st.session_state.results[el["id"]]
+                res_str = f"\\n{res['unit'][:2]} = {res['L']:.1f} dB"
+            
             if el["type"] == "Cavity":
-                graph.node(short_id, f"{el['name']}\\n(Cavity)", style='filled', fillcolor='#cce5ff', shape='box')
+                graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#cce5ff', shape='box')
             elif el["type"] == "Wall":
-                graph.node(short_id, f"{el['name']}\\n(Wall)", style='filled', fillcolor='#e2e3e5', shape='box')
+                graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#e2e3e5', shape='box')
             else:
                 graph.node(short_id, el['name'], style='filled', fillcolor='#f8d7da', shape='box')
                 
-        # Draw Edges
+        # Draw Edges dynamically
         for j in st.session_state.junctions:
             src_short = j["from"][-4:]
             recv_short = j["to"][-4:]
@@ -350,10 +410,17 @@ with col_main:
 
     elif st.session_state.current_view == "Results":
         st.markdown("### 📈 Calculation Results")
-        res_col1, res_col2, res_col3 = st.columns(3)
-        res_col1.metric("Room 1 Lp", f"{Lp1:.1f} dB", f"{E1:.2e} J")
-        res_col2.metric("Wall 2 Lv", f"{Lv2:.1f} dB", f"{E2:.2e} J")
-        res_col3.metric("Room 3 Lp", f"{Lp3:.1f} dB", f"{E3:.2e} J")
+        
+        if not st.session_state.elements:
+            st.info("No elements to display. Add elements and connections first.")
+        else:
+            # Dynamically create columns based on number of elements
+            cols = st.columns(min(len(st.session_state.elements), 4))
+            
+            for i, el in enumerate(st.session_state.elements):
+                col = cols[i % len(cols)]
+                res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
+                col.metric(el["name"], f"{res['L']:.1f} {res['unit'][-3:]}", f"E: {res['E']:.2e} J")
 
     elif st.session_state.current_view == "Calculation":
         st.success("Calculation complete!")
@@ -406,14 +473,22 @@ with col_right:
                     src_id = next(el["id"] for el in st.session_state.elements if el["name"] == source_el)
                     recv_id = next(el["id"] for el in st.session_state.elements if el["name"] == recv_el)
                     
-                    # Avoid duplicates
-                    if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
-                        st.session_state.junctions.append({
-                            "id": f"j_{int(time.time() * 1000)}",
-                            "from": src_id,
-                            "to": recv_id
-                        })
-                        st.rerun()
+                    # Block Wall to Wall Structural transmission as per user logic
+                    # We still allow the user to click the button but we throw an error label
+                    src_obj = next((e for e in st.session_state.elements if e["name"] == source_el), None)
+                    recv_obj = next((e for e in st.session_state.elements if e["name"] == recv_el), None)
+                    
+                    if src_obj and recv_obj and src_obj["type"] == "Wall" and recv_obj["type"] == "Wall":
+                        st.error("Direct Wall-to-Wall structural transmission is not yet permitted in this model.")
+                    else:
+                        # Avoid duplicates
+                        if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
+                            st.session_state.junctions.append({
+                                "id": f"j_{int(time.time() * 1000)}",
+                                "from": src_id,
+                                "to": recv_id
+                            })
+                            st.rerun()
         else:
             st.info("Create at least two elements to link.")
 
