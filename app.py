@@ -177,17 +177,17 @@ if st.session_state.selected_element == "🌍 Global Setup":
 elif st.session_state.selected_element == "Room 1 (Source)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        st.number_input("Volume (m³)", key="v1_ui")
-        st.number_input("Coupling Surface (m²)", key="s1_ui")
+        V1 = st.number_input("Volume (m³)", value=float(st.session_state.v1))
+        S1 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s1))
         st.markdown("**Acoustic Properties**")
-        st.number_input("Rev Time (s)", key="t60_1_ui")
+        T60_1 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_1))
         st.markdown("**Excitation**")
-        st.number_input("Input Power P1 (W)", format="%.4f", key="p1_ui")
+        P1 = st.number_input("Input Power P1 (W)", value=float(st.session_state.p1), format="%.4f")
     
-    st.session_state.v1 = st.session_state.v1_ui
-    st.session_state.s1 = st.session_state.s1_ui
-    st.session_state.t60_1 = st.session_state.t60_1_ui
-    st.session_state.p1 = st.session_state.p1_ui
+    st.session_state.v1 = V1
+    st.session_state.s1 = S1
+    st.session_state.t60_1 = T60_1
+    st.session_state.p1 = P1
 
 elif st.session_state.selected_element == "Wall 2 (Division)":
     with st.sidebar:
@@ -208,14 +208,14 @@ elif st.session_state.selected_element == "Wall 2 (Division)":
 elif st.session_state.selected_element == "Room 3 (Receiving)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        st.number_input("Volume (m³)", key="v3_ui")
-        st.number_input("Coupling Surface (m²)", key="s3_ui")
+        V3 = st.number_input("Volume (m³)", value=float(st.session_state.v3))
+        S3 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s3))
         st.markdown("**Acoustic Properties**")
-        st.number_input("Rev Time (s)", key="t60_3_ui")
+        T60_3 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_3))
     
-    st.session_state.v3 = st.session_state.v3_ui
-    st.session_state.s3 = st.session_state.s3_ui
-    st.session_state.t60_3 = st.session_state.t60_3_ui
+    st.session_state.v3 = V3
+    st.session_state.s3 = S3
+    st.session_state.t60_3 = T60_3
 
 
 # Re-assign local variables for the calculation engine
