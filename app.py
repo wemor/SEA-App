@@ -270,23 +270,29 @@ with col_main:
             st.markdown("#### Load Project")
             uploaded_file = st.file_uploader("Upload a saved `.json` project file", type="json")
             if uploaded_file is not None:
-                try:
-                    loaded_data = json.load(uploaded_file)
-                    
-                    # Apply loaded data back to state
-                    for section, params in loaded_data.items():
-                        for k, v in params.items():
-                            if k in st.session_state:
-                                if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
-                                    st.session_state[k] = float(v)
-                                else:
-                                    st.session_state[k] = str(v)
-                                
+                file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+                if "loaded_file_id" not in st.session_state or st.session_state.loaded_file_id != file_id:
+                    try:
+                        loaded_data = json.load(uploaded_file)
+                        
+                        # Apply loaded data back to state
+                        for section, params in loaded_data.items():
+                            for k, v in params.items():
+                                if k in st.session_state:
+                                    if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
+                                        st.session_state[k] = float(v)
+                                    else:
+                                        st.session_state[k] = str(v)
+                                        
+                        st.session_state.loaded_file_id = file_id
+                        st.success("Project loaded successfully!")
+                        st.info("Check the Model Elements tree to verify properties.")
+                        st.rerun()  # Force Streamlit to refresh the UI with new state values
+                    except Exception as e:
+                        st.error(f"Failed to load file. Error: {e}")
+                else:
                     st.success("Project loaded successfully!")
                     st.info("Check the Model Elements tree to verify properties.")
-                    st.rerun()  # Force Streamlit to refresh the UI with new state values
-                except Exception as e:
-                    st.error(f"Failed to load file. Error: {e}")
 
     elif st.session_state.current_view == "Visualization":
         # Graph Visualization
