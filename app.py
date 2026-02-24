@@ -8,6 +8,8 @@ from sea_app.core.system import SEASystem
 
 st.set_page_config(page_title="SEA App", page_icon="🌊", layout="wide")
 
+st.title("🌊 Statistical Energy Analysis (SEA) App")
+
 # --- 1. Top Toolbar (Simulated) & Global Theming ---
 st.markdown(
     """
@@ -64,14 +66,12 @@ st.markdown(
         <div class="toolbar-button">Calculation</div>
         <div class="toolbar-button">Results</div>
         <div class="toolbar-button">Materials</div>
-        <div class="toolbar-title">Querschnittberechnung_I - SEA App</div>
+        <div class="toolbar-title"></div>
         <div class="toolbar-button">Help</div>
     </div>
     """,
     unsafe_allow_html=True
 )
-
-st.title("🌊 Statistical Energy Analysis (SEA) App")
 
 
 # --- 2. Left Sidebar (Project Tree) ---
