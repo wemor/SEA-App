@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import math
 import graphviz
+import json
 
 # Import sea_app core functions
 from sea_app.core.system import SEASystem
@@ -72,7 +73,7 @@ if "current_view" not in st.session_state:
 t_col1, t_col2, t_col3, t_col4, t_col5, t_spacer, t_col6 = st.columns([1, 1, 1, 1, 1, 3, 1])
 
 with t_col1:
-    if st.button("File", use_container_width=True): pass
+    if st.button("File", use_container_width=True): st.session_state.current_view = "File"
 with t_col2:
     if st.button("Visualization", use_container_width=True): st.session_state.current_view = "Visualization"
 with t_col3:
@@ -141,9 +142,9 @@ for k, v in defaults.items():
 
 if st.session_state.selected_element == "🌍 Global Setup":
     with st.sidebar:
-        freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=st.session_state.freq, step=100.0, key="freq_ui")
-        rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=st.session_state.rho0, format="%.3f", key="rho0_ui")
-        c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=st.session_state.c0, format="%.1f", key="c0_ui")
+        freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=float(st.session_state.freq), step=100.0, key="freq_ui")
+        rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=float(st.session_state.rho0), format="%.3f", key="rho0_ui")
+        c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=float(st.session_state.c0), format="%.1f", key="c0_ui")
     
     # Sync visual inputs with backend state
     st.session_state.freq, st.session_state.rho0, st.session_state.c0 = freq, rho0, c0
@@ -151,34 +152,34 @@ if st.session_state.selected_element == "🌍 Global Setup":
 elif st.session_state.selected_element == "Room 1 (Source)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        V1 = st.number_input("Volume (m³)", value=st.session_state.v1, key="v1_ui")
-        S1 = st.number_input("Coupling Surface (m²)", value=st.session_state.s1, key="s1_ui")
+        V1 = st.number_input("Volume (m³)", value=float(st.session_state.v1), key="v1_ui")
+        S1 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s1), key="s1_ui")
         st.markdown("**Acoustic Properties**")
-        T60_1 = st.number_input("Rev Time (s)", value=st.session_state.t60_1, key="t60_1_ui")
+        T60_1 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_1), key="t60_1_ui")
         st.markdown("**Excitation**")
-        P1 = st.number_input("Input Power P1 (W)", value=st.session_state.p1, format="%.4f", key="p1_ui")
+        P1 = st.number_input("Input Power P1 (W)", value=float(st.session_state.p1), format="%.4f", key="p1_ui")
     
     st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1 = V1, S1, T60_1, P1
 
 elif st.session_state.selected_element == "Wall 2 (Division)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        S2 = st.number_input("Surface (m²)", value=st.session_state.s2, key="s2_ui")
-        m_2 = st.number_input("Area Density (kg/m²)", value=st.session_state.m2, key="m2_ui")
+        S2 = st.number_input("Surface (m²)", value=float(st.session_state.s2), key="s2_ui")
+        m_2 = st.number_input("Area Density (kg/m²)", value=float(st.session_state.m2), key="m2_ui")
         st.markdown("**Structural Properties**")
-        fc_2 = st.number_input("Critical Freq (Hz)", value=st.session_state.fc2, key="fc2_ui")
-        sigma2 = st.number_input("Radiation Efficiency", value=st.session_state.sig2, key="sig2_ui")
-        eta2 = st.number_input("Internal Damping", value=st.session_state.eta2, key="eta2_ui")
+        fc_2 = st.number_input("Critical Freq (Hz)", value=float(st.session_state.fc2), key="fc2_ui")
+        sigma2 = st.number_input("Radiation Efficiency", value=float(st.session_state.sig2), key="sig2_ui")
+        eta2 = st.number_input("Internal Damping", value=float(st.session_state.eta2), key="eta2_ui")
     
     st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2 = S2, m_2, fc_2, sigma2, eta2
 
 elif st.session_state.selected_element == "Room 3 (Receiving)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        V3 = st.number_input("Volume (m³)", value=st.session_state.v3, key="v3_ui")
-        S3 = st.number_input("Coupling Surface (m²)", value=st.session_state.s3, key="s3_ui")
+        V3 = st.number_input("Volume (m³)", value=float(st.session_state.v3), key="v3_ui")
+        S3 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s3), key="s3_ui")
         st.markdown("**Acoustic Properties**")
-        T60_3 = st.number_input("Rev Time (s)", value=st.session_state.t60_3, key="t60_3_ui")
+        T60_3 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_3), key="t60_3_ui")
     
     st.session_state.v3, st.session_state.s3, st.session_state.t60_3 = V3, S3, T60_3
 
@@ -239,7 +240,48 @@ col_main, col_right = st.columns([5, 1])
 
 with col_main:
     
-    if st.session_state.current_view == "Visualization":
+    if st.session_state.current_view == "File":
+        st.markdown("### 💾 Project File Management")
+        
+        f_col1, f_col2 = st.columns(2)
+        
+        with f_col1:
+            st.markdown("#### Save Project")
+            current_state_dict = {
+                "global": {"freq": freq, "rho0": rho0, "c0": c0},
+                "room_1": {"v1": V1, "s1": S1, "t60_1": T60_1, "p1": P1},
+                "wall_2": {"s2": S2, "m2": m_2, "fc2": fc_2, "sig2": sigma2, "eta2": eta2},
+                "room_3": {"v3": V3, "s3": S3, "t60_3": T60_3}
+            }
+            json_string = json.dumps(current_state_dict, indent=2)
+            
+            st.download_button(
+                label="⬇️ Download `sea_project.json`",
+                data=json_string,
+                file_name="sea_project.json",
+                mime="application/json"
+            )
+            
+        with f_col2:
+            st.markdown("#### Load Project")
+            uploaded_file = st.file_uploader("Upload a saved `.json` project file", type="json")
+            if uploaded_file is not None:
+                try:
+                    loaded_data = json.load(uploaded_file)
+                    
+                    # Apply loaded data back to state
+                    for section, params in loaded_data.items():
+                        for k, v in params.items():
+                            if k in st.session_state:
+                                st.session_state[k] = float(v)
+                                
+                    st.success("Project loaded successfully!")
+                    st.info("Check the Model Elements tree to verify properties.")
+                    st.rerun()  # Force Streamlit to refresh the UI with new state values
+                except Exception as e:
+                    st.error(f"Failed to load file. Error: {e}")
+
+    elif st.session_state.current_view == "Visualization":
         # Graph Visualization
         graph = graphviz.Digraph()
         graph.attr(rankdir='LR')
