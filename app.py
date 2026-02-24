@@ -278,22 +278,18 @@ with col_main:
                         # Apply loaded data back to state
                         for section, params in loaded_data.items():
                             for k, v in params.items():
-                                ui_key = f"{k}_ui"
-                                if k == "project_name":
-                                    ui_key = "pname_ui"
-                                
                                 if k in st.session_state:
                                     if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
                                         st.session_state[k] = float(v)
                                     else:
                                         st.session_state[k] = str(v)
-                                        
+                                
+                                # Manually remove potentially stale UI widget states linked to this key
+                                ui_key = f"{k}_ui"
+                                if k == "project_name": ui_key = "pname_ui"
                                 if ui_key in st.session_state:
-                                    if isinstance(st.session_state[ui_key], float) or isinstance(st.session_state[ui_key], int):
-                                        st.session_state[ui_key] = float(v)
-                                    else:
-                                        st.session_state[ui_key] = str(v)
-                                        
+                                    del st.session_state[ui_key]
+                                    
                         st.session_state.loaded_file_id = file_id
                         st.success("Project loaded successfully!")
                         st.info("Check the Model Elements tree to verify properties.")
