@@ -147,8 +147,8 @@ Lp3 = 20 * math.log10(p3 / 20e-6)
 
 
 # --- 3. Main View & 4. Right Sidebar Area (Using Columns) ---
-# Create a 3:1 ratio layout
-col_main, col_right = st.columns([3, 1])
+# Create a 5:1 ratio layout to make the right side much narrower
+col_main, col_right = st.columns([5, 1])
 
 with col_main:
     st.subheader("📊 SEA Model Visualization")
