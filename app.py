@@ -89,7 +89,20 @@ st.markdown("---")
 
 
 # --- 2. Left Sidebar (Project Tree) ---
-st.sidebar.markdown("### 🌲 Project Tree")
+
+# Initialize default values if not present
+defaults = {
+    "project_name": "Project xxxxxxxx",
+    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
+    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
+    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
+    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+st.sidebar.markdown(f"### 🌲 {st.session_state.project_name}")
 st.sidebar.markdown("---")
 
 # Initialize Session State for Selection
@@ -129,25 +142,15 @@ st.sidebar.markdown(f"#### Edit: {st.session_state.selected_element}")
 # We still need to keep the values in session state or default variables to calculate the graph!
 # In a real app we'd load this from a project dict, here we use Streamlit keys and defaults.
 
-# Initialize default values if not present
-defaults = {
-    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
-    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
-    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
-    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
 if st.session_state.selected_element == "🌍 Global Setup":
     with st.sidebar:
+        pname = st.text_input("Project Name", value=st.session_state.project_name, key="pname_ui")
         freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=float(st.session_state.freq), step=100.0, key="freq_ui")
         rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=float(st.session_state.rho0), format="%.3f", key="rho0_ui")
         c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=float(st.session_state.c0), format="%.1f", key="c0_ui")
     
     # Sync visual inputs with backend state
-    st.session_state.freq, st.session_state.rho0, st.session_state.c0 = freq, rho0, c0
+    st.session_state.project_name, st.session_state.freq, st.session_state.rho0, st.session_state.c0 = pname, freq, rho0, c0
 
 elif st.session_state.selected_element == "Room 1 (Source)":
     with st.sidebar:
@@ -248,17 +251,18 @@ with col_main:
         with f_col1:
             st.markdown("#### Save Project")
             current_state_dict = {
-                "global": {"freq": freq, "rho0": rho0, "c0": c0},
+                "global": {"project_name": st.session_state.project_name, "freq": freq, "rho0": rho0, "c0": c0},
                 "room_1": {"v1": V1, "s1": S1, "t60_1": T60_1, "p1": P1},
                 "wall_2": {"s2": S2, "m2": m_2, "fc2": fc_2, "sig2": sigma2, "eta2": eta2},
                 "room_3": {"v3": V3, "s3": S3, "t60_3": T60_3}
             }
             json_string = json.dumps(current_state_dict, indent=2)
             
+            p_name_clean = st.session_state.project_name.replace(" ", "_")
             st.download_button(
-                label="⬇️ Download `sea_project.json`",
+                label=f"⬇️ Download `{p_name_clean}.json`",
                 data=json_string,
-                file_name="sea_project.json",
+                file_name=f"{p_name_clean}.json",
                 mime="application/json"
             )
             
@@ -273,7 +277,10 @@ with col_main:
                     for section, params in loaded_data.items():
                         for k, v in params.items():
                             if k in st.session_state:
-                                st.session_state[k] = float(v)
+                                if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
+                                    st.session_state[k] = float(v)
+                                else:
+                                    st.session_state[k] = str(v)
                                 
                     st.success("Project loaded successfully!")
                     st.info("Check the Model Elements tree to verify properties.")
