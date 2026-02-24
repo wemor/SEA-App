@@ -61,18 +61,30 @@ st.markdown(
         z-index: 1000;
     }
     </style>
-    <div class="toolbar-container">
-        <div class="toolbar-button">File</div>
-        <div class="toolbar-button">Visualization</div>
-        <div class="toolbar-button">Calculation</div>
-        <div class="toolbar-button">Results</div>
-        <div class="toolbar-button">Materials</div>
-        <div class="toolbar-title"></div>
-        <div class="toolbar-button">Help</div>
-    </div>
     """,
     unsafe_allow_html=True
 )
+
+if "current_view" not in st.session_state:
+    st.session_state.current_view = "Visualization"
+
+# Native Streamlit Toolbar
+t_col1, t_col2, t_col3, t_col4, t_col5, t_spacer, t_col6 = st.columns([1, 1, 1, 1, 1, 3, 1])
+
+with t_col1:
+    if st.button("File", use_container_width=True): pass
+with t_col2:
+    if st.button("Visualization", use_container_width=True): st.session_state.current_view = "Visualization"
+with t_col3:
+    if st.button("Calculation", use_container_width=True): st.session_state.current_view = "Calculation"
+with t_col4:
+    if st.button("Results", use_container_width=True): st.session_state.current_view = "Results"
+with t_col5:
+    if st.button("Materials", use_container_width=True): pass
+with t_col6:
+    if st.button("Help", use_container_width=True): st.session_state.current_view = "Help"
+
+st.markdown("---")
 
 
 # --- 2. Left Sidebar (Project Tree) ---
@@ -227,26 +239,39 @@ col_main, col_right = st.columns([5, 1])
 
 with col_main:
     
-    # Graph Visualization
-    graph = graphviz.Digraph()
-    graph.attr(rankdir='LR')
-    graph.node('R1', f'Room 1\\nLp = {Lp1:.1f} dB', style='filled', fillcolor='#cce5ff', shape='box')
-    graph.node('W2', f'Wall 2\\nLv = {Lv2:.1f} dB', style='filled', fillcolor='#e2e3e5', shape='box')
-    graph.node('R3', f'Room 3\\nLp = {Lp3:.1f} dB', style='filled', fillcolor='#d4edda', shape='box')
-    graph.edge('R1', 'W2', label=f'η={eta12:.1e}')
-    graph.edge('W2', 'R1', label=f'η={eta21:.1e}')
-    graph.edge('W2', 'R3', label=f'η={eta23:.1e}')
-    graph.edge('R3', 'W2', label=f'η={eta21:.1e}')
-    graph.edge('R1', 'R3', label=f'η={eta13:.1e}')
-    
-    st.graphviz_chart(graph, use_container_width=True)
-    
-    # Calculation Results inline
-    with st.expander("📈 Calculation Results", expanded=True):
+    if st.session_state.current_view == "Visualization":
+        # Graph Visualization
+        graph = graphviz.Digraph()
+        graph.attr(rankdir='LR')
+        graph.node('R1', f'Room 1\\nLp = {Lp1:.1f} dB', style='filled', fillcolor='#cce5ff', shape='box')
+        graph.node('W2', f'Wall 2\\nLv = {Lv2:.1f} dB', style='filled', fillcolor='#e2e3e5', shape='box')
+        graph.node('R3', f'Room 3\\nLp = {Lp3:.1f} dB', style='filled', fillcolor='#d4edda', shape='box')
+        graph.edge('R1', 'W2', label=f'η={eta12:.1e}')
+        graph.edge('W2', 'R1', label=f'η={eta21:.1e}')
+        graph.edge('W2', 'R3', label=f'η={eta23:.1e}')
+        graph.edge('R3', 'W2', label=f'η={eta21:.1e}')
+        graph.edge('R1', 'R3', label=f'η={eta13:.1e}')
+        
+        st.graphviz_chart(graph, use_container_width=True)
+
+    elif st.session_state.current_view == "Results":
+        st.markdown("### 📈 Calculation Results")
         res_col1, res_col2, res_col3 = st.columns(3)
         res_col1.metric("Room 1 Lp", f"{Lp1:.1f} dB", f"{E1:.2e} J")
         res_col2.metric("Wall 2 Lv", f"{Lv2:.1f} dB", f"{E2:.2e} J")
         res_col3.metric("Room 3 Lp", f"{Lp3:.1f} dB", f"{E3:.2e} J")
+
+    elif st.session_state.current_view == "Calculation":
+        st.success("Calculation complete!")
+        st.info(f"SEA Energy matrix solved for f = {int(freq)} Hz.")
+        st.markdown("Navigate to **Results** to see detailed acoustic metrics, or **Visualization** to see updated graph edge weights.")
+
+    elif st.session_state.current_view == "Help":
+        try:
+            with open("docs/manual.md", "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        except FileNotFoundError:
+            st.warning("Help manual not found at `docs/manual.md`.")
 
 with col_right:
     st.markdown("### 🧱 SEA Elements")
