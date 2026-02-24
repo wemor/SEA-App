@@ -79,41 +79,103 @@ st.markdown(
 st.sidebar.markdown("### 🌲 Project Tree")
 st.sidebar.markdown("---")
 
-# Expandable Tree Structure representation
+# Initialize Session State for Selection
+if "selected_element" not in st.session_state:
+    st.session_state.selected_element = "🌍 Global Setup"
+
 with st.sidebar.expander("[-] Model Elements", expanded=True):
-    # Tree nodes for the existing model
-    st.markdown("├─ **Room 1 (Source)**")
-    st.markdown("├─ **Wall 2 (Partition)**")
-    st.markdown("└─ **Room 3 (Receiving)**")
+    # Interactive tree using a styling hack for a radio button
+    tree_options = [
+        "🌍 Global Setup",
+        "├─ Room 1 (Source)",
+        "├─ Wall 2 (Partition)",
+        "└─ Room 3 (Receiving)"
+    ]
+    
+    selected_option = st.radio(
+        "Select Element to Edit:", 
+        tree_options, 
+        label_visibility="collapsed"
+    )
+
+    # Map visual tree options back to logical IDs
+    if "Global Setup" in selected_option:
+        st.session_state.selected_element = "🌍 Global Setup"
+    elif "Room 1" in selected_option:
+        st.session_state.selected_element = "Room 1 (Source)"
+    elif "Wall 2" in selected_option:
+        st.session_state.selected_element = "Wall 2 (Division)"
+    elif "Room 3" in selected_option:
+        st.session_state.selected_element = "Room 3 (Receiving)"
+
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("#### Input Parameters")
+st.sidebar.markdown(f"#### Edit: {st.session_state.selected_element}")
 
-with st.sidebar.expander("🌍 Global Setup", expanded=True):
-    freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=500.0, step=100.0)
-    rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=1.204, format="%.3f")
-    c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=343.0, format="%.1f")
-    omega = 2 * math.pi * freq
+# Input Parameters - Conditionally Displayed based on Selection
+# We still need to keep the values in session state or default variables to calculate the graph!
+# In a real app we'd load this from a project dict, here we use Streamlit keys and defaults.
 
-with st.sidebar.expander("Room 1 (Source)", expanded=False):
-    V1 = st.number_input("Volume (m³)", value=60.0, key="v1")
-    S1 = st.number_input("Coupling Surface (m²)", value=12.0, key="s1")
-    T60_1 = st.number_input("Rev Time (s)", value=0.6, key="t60_1")
-    P1 = st.number_input("Input Power P1 (W)", value=0.005, format="%.4f", key="p1")
-    eta1 = 2.2 / (T60_1 * freq)
+# Initialize default values if not present
+defaults = {
+    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
+    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
+    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
+    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-with st.sidebar.expander("Wall 2 (Division)", expanded=False):
-    S2 = st.number_input("Surface (m²)", value=12.0, key="s2")
-    m_2 = st.number_input("Area Density (kg/m²)", value=200.0, key="m2")
-    fc_2 = st.number_input("Critical Freq (Hz)", value=150.0, key="fc2")
-    sigma2 = st.number_input("Radiation Efficiency", value=1.0, key="sig2")
-    eta2 = st.number_input("Internal Damping", value=0.05, key="eta2")
+if st.session_state.selected_element == "🌍 Global Setup":
+    freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=st.session_state.freq, step=100.0, key="freq_ui")
+    rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=st.session_state.rho0, format="%.3f", key="rho0_ui")
+    c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=st.session_state.c0, format="%.1f", key="c0_ui")
+    
+    # Sync visual inputs with backend state
+    st.session_state.freq, st.session_state.rho0, st.session_state.c0 = freq, rho0, c0
 
-with st.sidebar.expander("Room 3 (Receiving)", expanded=False):
-    V3 = st.number_input("Volume (m³)", value=72.0, key="v3")
-    S3 = st.number_input("Coupling Surface (m²)", value=12.0, key="s3")
-    T60_3 = st.number_input("Rev Time (s)", value=0.7, key="t60_3")
-    eta3 = 2.2 / (T60_3 * freq)
+elif st.session_state.selected_element == "Room 1 (Source)":
+    st.markdown("**Geometric Properties**")
+    V1 = st.number_input("Volume (m³)", value=st.session_state.v1, key="v1_ui")
+    S1 = st.number_input("Coupling Surface (m²)", value=st.session_state.s1, key="s1_ui")
+    st.markdown("**Acoustic Properties**")
+    T60_1 = st.number_input("Rev Time (s)", value=st.session_state.t60_1, key="t60_1_ui")
+    st.markdown("**Excitation**")
+    P1 = st.number_input("Input Power P1 (W)", value=st.session_state.p1, format="%.4f", key="p1_ui")
+    
+    st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1 = V1, S1, T60_1, P1
+
+elif st.session_state.selected_element == "Wall 2 (Division)":
+    st.markdown("**Geometric Properties**")
+    S2 = st.number_input("Surface (m²)", value=st.session_state.s2, key="s2_ui")
+    m_2 = st.number_input("Area Density (kg/m²)", value=st.session_state.m2, key="m2_ui")
+    st.markdown("**Structural Properties**")
+    fc_2 = st.number_input("Critical Freq (Hz)", value=st.session_state.fc2, key="fc2_ui")
+    sigma2 = st.number_input("Radiation Efficiency", value=st.session_state.sig2, key="sig2_ui")
+    eta2 = st.number_input("Internal Damping", value=st.session_state.eta2, key="eta2_ui")
+    
+    st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2 = S2, m_2, fc_2, sigma2, eta2
+
+elif st.session_state.selected_element == "Room 3 (Receiving)":
+    st.markdown("**Geometric Properties**")
+    V3 = st.number_input("Volume (m³)", value=st.session_state.v3, key="v3_ui")
+    S3 = st.number_input("Coupling Surface (m²)", value=st.session_state.s3, key="s3_ui")
+    st.markdown("**Acoustic Properties**")
+    T60_3 = st.number_input("Rev Time (s)", value=st.session_state.t60_3, key="t60_3_ui")
+    
+    st.session_state.v3, st.session_state.s3, st.session_state.t60_3 = V3, S3, T60_3
+
+
+# Re-assign local variables for the calculation engine so it doesn't break
+freq, rho0, c0 = st.session_state.freq, st.session_state.rho0, st.session_state.c0
+V1, S1, T60_1, P1 = st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1
+S2, m_2, fc_2, sigma2, eta2 = st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2
+V3, S3, T60_3 = st.session_state.v3, st.session_state.s3, st.session_state.t60_3
+
+omega = 2 * math.pi * freq
+eta1 = 2.2 / (T60_1 * freq) if T60_1 > 0 else 0
+eta3 = 2.2 / (T60_3 * freq) if T60_3 > 0 else 0
 
 # --- Calculation Engine (same as before) ---
 M2 = m_2 * S2
