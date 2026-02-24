@@ -8,7 +8,7 @@ from sea_app.core.system import SEASystem
 
 st.set_page_config(page_title="SEA App", page_icon="🌊", layout="wide")
 
-st.title("🌊 Statistical Energy Analysis (SEA) App")
+st.markdown("<h3>🌊 Statistical Energy Analysis (SEA) App</h3>", unsafe_allow_html=True)
 
 # --- 1. Top Toolbar (Simulated) & Global Theming ---
 st.markdown(
@@ -63,6 +63,7 @@ st.markdown(
     </style>
     <div class="toolbar-container">
         <div class="toolbar-button">File</div>
+        <div class="toolbar-button">Visualization</div>
         <div class="toolbar-button">Calculation</div>
         <div class="toolbar-button">Results</div>
         <div class="toolbar-button">Materials</div>
@@ -159,7 +160,6 @@ Lp3 = 20 * math.log10(p3 / 20e-6)
 col_main, col_right = st.columns([5, 1])
 
 with col_main:
-    st.subheader("📊 SEA Model Visualization")
     
     # Graph Visualization
     graph = graphviz.Digraph()
