@@ -8,46 +8,112 @@ from sea_app.core.system import SEASystem
 
 st.set_page_config(page_title="SEA App", page_icon="🌊", layout="wide")
 
-# --- 1. Top Toolbar (Simulated) ---
+# --- 1. Top Toolbar (Simulated) & Global Theming ---
 st.markdown(
     """
     <style>
+    /* Global Streamlit Background Overrides */
+    .stApp {
+        background-color: #0d1117;
+        color: #e6edf3;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    /* Sidebar Overrides */
+    [data-testid="stSidebar"] {
+        background-color: #21262d;
+        border-right: 1px solid #30363d;
+    }
+    [data-testid="stSidebar"] * {
+        color: #e6edf3 !important;
+    }
+    
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #e6edf3 !important;
+    }
+
+    /* Cards/Containers in Streamlit */
+    [data-testid="stVerticalBlock"] > div[style*="border"] {
+        background-color: #161b22;
+        border-color: #30363d !important;
+        border-radius: 12px;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background-color: #161b22;
+        color: #e6edf3;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .stButton > button:hover {
+        border-color: #58a6ff;
+        color: #58a6ff;
+    }
+
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background-color: #161b22;
+        border-radius: 6px;
+    }
+
+    /* Inputs */
+    .stNumberInput input {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        color: #e6edf3 !important;
+        border: 1px solid #30363d !important;
+    }
+    .stNumberInput input:focus {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 0 1px #58a6ff !important;
+    }
+
+    /* Simulated Toolbar */
     .toolbar-container {
         display: flex;
         gap: 10px;
         padding-bottom: 20px;
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid #30363d;
         margin-bottom: 20px;
     }
     .toolbar-button {
         padding: 8px 16px;
-        background-color: #f0f2f6;
-        border: 1px solid #c4c4c4;
+        background-color: #161b22;
+        border: 1px solid #30363d;
         border-radius: 4px;
         cursor: pointer;
         text-align: center;
         flex: 1;
         font-weight: 500;
-        color: #31333F;
+        color: #e6edf3;
+        transition: all 0.2s;
+    }
+    .toolbar-button:hover {
+        border-color: #58a6ff;
+        color: #58a6ff;
     }
     .toolbar-title {
         flex: 2;
         text-align: center;
         font-weight: bold;
         align-self: center;
-        color: #31333F;
+        color: #e6edf3;
     }
+
+    /* Fixed Footer Messaging */
     .footer-msg {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
-        background-color: #f1f3f6;
-        color: #31333F;
+        background-color: #161b22;
+        color: #8b949e;
         text-align: left;
-        padding: 5px 20px;
+        padding: 8px 20px;
         font-size: 14px;
-        border-top: 1px solid #ddd;
+        border-top: 1px solid #30363d;
         z-index: 1000;
     }
     </style>
@@ -56,7 +122,7 @@ st.markdown(
         <div class="toolbar-button">Calculation</div>
         <div class="toolbar-button">Results</div>
         <div class="toolbar-button">Materials</div>
-        <div class="toolbar-title">SEA App Toolbars</div>
+        <div class="toolbar-title">Querschnittberechnung_I - SEA App</div>
         <div class="toolbar-button">Help</div>
     </div>
     """,
