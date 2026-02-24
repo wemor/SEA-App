@@ -128,41 +128,45 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 if st.session_state.selected_element == "🌍 Global Setup":
-    freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=st.session_state.freq, step=100.0, key="freq_ui")
-    rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=st.session_state.rho0, format="%.3f", key="rho0_ui")
-    c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=st.session_state.c0, format="%.1f", key="c0_ui")
+    with st.sidebar:
+        freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=st.session_state.freq, step=100.0, key="freq_ui")
+        rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=st.session_state.rho0, format="%.3f", key="rho0_ui")
+        c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=st.session_state.c0, format="%.1f", key="c0_ui")
     
     # Sync visual inputs with backend state
     st.session_state.freq, st.session_state.rho0, st.session_state.c0 = freq, rho0, c0
 
 elif st.session_state.selected_element == "Room 1 (Source)":
-    st.markdown("**Geometric Properties**")
-    V1 = st.number_input("Volume (m³)", value=st.session_state.v1, key="v1_ui")
-    S1 = st.number_input("Coupling Surface (m²)", value=st.session_state.s1, key="s1_ui")
-    st.markdown("**Acoustic Properties**")
-    T60_1 = st.number_input("Rev Time (s)", value=st.session_state.t60_1, key="t60_1_ui")
-    st.markdown("**Excitation**")
-    P1 = st.number_input("Input Power P1 (W)", value=st.session_state.p1, format="%.4f", key="p1_ui")
+    with st.sidebar:
+        st.markdown("**Geometric Properties**")
+        V1 = st.number_input("Volume (m³)", value=st.session_state.v1, key="v1_ui")
+        S1 = st.number_input("Coupling Surface (m²)", value=st.session_state.s1, key="s1_ui")
+        st.markdown("**Acoustic Properties**")
+        T60_1 = st.number_input("Rev Time (s)", value=st.session_state.t60_1, key="t60_1_ui")
+        st.markdown("**Excitation**")
+        P1 = st.number_input("Input Power P1 (W)", value=st.session_state.p1, format="%.4f", key="p1_ui")
     
     st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1 = V1, S1, T60_1, P1
 
 elif st.session_state.selected_element == "Wall 2 (Division)":
-    st.markdown("**Geometric Properties**")
-    S2 = st.number_input("Surface (m²)", value=st.session_state.s2, key="s2_ui")
-    m_2 = st.number_input("Area Density (kg/m²)", value=st.session_state.m2, key="m2_ui")
-    st.markdown("**Structural Properties**")
-    fc_2 = st.number_input("Critical Freq (Hz)", value=st.session_state.fc2, key="fc2_ui")
-    sigma2 = st.number_input("Radiation Efficiency", value=st.session_state.sig2, key="sig2_ui")
-    eta2 = st.number_input("Internal Damping", value=st.session_state.eta2, key="eta2_ui")
+    with st.sidebar:
+        st.markdown("**Geometric Properties**")
+        S2 = st.number_input("Surface (m²)", value=st.session_state.s2, key="s2_ui")
+        m_2 = st.number_input("Area Density (kg/m²)", value=st.session_state.m2, key="m2_ui")
+        st.markdown("**Structural Properties**")
+        fc_2 = st.number_input("Critical Freq (Hz)", value=st.session_state.fc2, key="fc2_ui")
+        sigma2 = st.number_input("Radiation Efficiency", value=st.session_state.sig2, key="sig2_ui")
+        eta2 = st.number_input("Internal Damping", value=st.session_state.eta2, key="eta2_ui")
     
     st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2 = S2, m_2, fc_2, sigma2, eta2
 
 elif st.session_state.selected_element == "Room 3 (Receiving)":
-    st.markdown("**Geometric Properties**")
-    V3 = st.number_input("Volume (m³)", value=st.session_state.v3, key="v3_ui")
-    S3 = st.number_input("Coupling Surface (m²)", value=st.session_state.s3, key="s3_ui")
-    st.markdown("**Acoustic Properties**")
-    T60_3 = st.number_input("Rev Time (s)", value=st.session_state.t60_3, key="t60_3_ui")
+    with st.sidebar:
+        st.markdown("**Geometric Properties**")
+        V3 = st.number_input("Volume (m³)", value=st.session_state.v3, key="v3_ui")
+        S3 = st.number_input("Coupling Surface (m²)", value=st.session_state.s3, key="s3_ui")
+        st.markdown("**Acoustic Properties**")
+        T60_3 = st.number_input("Rev Time (s)", value=st.session_state.t60_3, key="t60_3_ui")
     
     st.session_state.v3, st.session_state.s3, st.session_state.t60_3 = V3, S3, T60_3
 
