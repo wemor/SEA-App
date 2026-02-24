@@ -75,11 +75,7 @@ if "project_name" not in st.session_state:
     st.session_state.c0 = 343.0
 
 if "elements" not in st.session_state:
-    st.session_state.elements = [
-        {"id": "c1", "type": "Cavity", "name": "Room 1 (Source)", "volume": 60.0, "surface": 12.0, "t60": 0.6, "power": 0.005},
-        {"id": "w2", "type": "Wall", "name": "Wall 2 (Division)", "surface": 12.0, "density": 200.0, "fc": 150.0, "sigma": 1.0, "eta": 0.05},
-        {"id": "c3", "type": "Cavity", "name": "Room 3 (Receiving)", "volume": 72.0, "surface": 12.0, "t60": 0.7, "power": 0.0}
-    ]
+    st.session_state.elements = []
 
 if "junctions" not in st.session_state:
     st.session_state.junctions = []
@@ -224,18 +220,24 @@ elif active_el is not None:
 project_name = st.session_state.project_name
 freq, rho0, c0 = float(st.session_state.freq), float(st.session_state.rho0), float(st.session_state.c0)
 
-# Default fallbacks
+# Default fallbacks (in case user hasn't created elements yet)
 V1, S1, T60_1, P1 = 60.0, 12.0, 0.6, 0.005
 S2, m_2, fc_2, sigma2, eta2 = 12.0, 200.0, 150.0, 1.0, 0.05
 V3, S3, T60_3 = 72.0, 12.0, 0.7
 
+# Find the first Cavity for Room 1, the first Wall for Wall 2, second Cavity for Room 3
+cavity_count, wall_count = 0, 0
 for el in st.session_state.elements:
-    if el["id"] == "c1":
-        V1, S1, T60_1, P1 = el["volume"], el["surface"], el["t60"], el.get("power", 0.0)
-    elif el["id"] == "w2":
-        S2, m_2, fc_2, sigma2, eta2 = el["surface"], el["density"], el["fc"], el["sigma"], el["eta"]
-    elif el["id"] == "c3":
-        V3, S3, T60_3 = el["volume"], el["surface"], el["t60"]
+    if el["type"] == "Cavity":
+        cavity_count += 1
+        if cavity_count == 1:
+            V1, S1, T60_1, P1 = el["volume"], el["surface"], el["t60"], el.get("power", 0.0)
+        elif cavity_count == 2:
+            V3, S3, T60_3 = el["volume"], el["surface"], el["t60"]
+    elif el["type"] == "Wall":
+        wall_count += 1
+        if wall_count == 1:
+            S2, m_2, fc_2, sigma2, eta2 = el["surface"], el["density"], el["fc"], el["sigma"], el["eta"]
 
 omega = 2 * math.pi * freq
 eta1 = 2.2 / (T60_1 * freq) if T60_1 > 0 else 0
@@ -324,15 +326,26 @@ with col_main:
         # Graph Visualization
         graph = graphviz.Digraph()
         graph.attr(rankdir='LR')
-        graph.node('R1', f'Room 1\\nLp = {Lp1:.1f} dB', style='filled', fillcolor='#cce5ff', shape='box')
-        graph.node('W2', f'Wall 2\\nLv = {Lv2:.1f} dB', style='filled', fillcolor='#e2e3e5', shape='box')
-        graph.node('R3', f'Room 3\\nLp = {Lp3:.1f} dB', style='filled', fillcolor='#d4edda', shape='box')
-        graph.edge('R1', 'W2', label=f'η={eta12:.1e}')
-        graph.edge('W2', 'R1', label=f'η={eta21:.1e}')
-        graph.edge('W2', 'R3', label=f'η={eta23:.1e}')
-        graph.edge('R3', 'W2', label=f'η={eta21:.1e}')
-        graph.edge('R1', 'R3', label=f'η={eta13:.1e}')
         
+        # Draw Nodes
+        for el in st.session_state.elements:
+            short_id = el["id"][-4:] # Use last 4 chars of ID for node name
+            if el["type"] == "Cavity":
+                graph.node(short_id, f"{el['name']}\\n(Cavity)", style='filled', fillcolor='#cce5ff', shape='box')
+            elif el["type"] == "Wall":
+                graph.node(short_id, f"{el['name']}\\n(Wall)", style='filled', fillcolor='#e2e3e5', shape='box')
+            else:
+                graph.node(short_id, el['name'], style='filled', fillcolor='#f8d7da', shape='box')
+                
+        # Draw Edges
+        for j in st.session_state.junctions:
+            src_short = j["from"][-4:]
+            recv_short = j["to"][-4:]
+            graph.edge(src_short, recv_short, label="linked")
+            
+        if len(st.session_state.elements) == 0:
+            graph.node('Empty', 'No elements created yet.\\nAdd them from the right sidebar.', style='dashed', shape='box')
+            
         st.graphviz_chart(graph, use_container_width=True)
 
     elif st.session_state.current_view == "Results":
@@ -379,7 +392,30 @@ with col_right:
         
     st.button("Plate", use_container_width=True, disabled=True)
     st.button("Beam", use_container_width=True, disabled=True)
-    st.button("Junction", use_container_width=True, disabled=True)
+    
+    st.markdown("---")
+    st.markdown("### 🔗 Connections")
+    with st.expander("Add Junction", expanded=False):
+        if len(st.session_state.elements) >= 2:
+            el_names = [el["name"] for el in st.session_state.elements]
+            source_el = st.selectbox("From (Source)", el_names, key="j_src")
+            recv_el = st.selectbox("To (Receiving)", el_names, key="j_recv")
+            
+            if st.button("Create Link", use_container_width=True):
+                if source_el != recv_el:
+                    src_id = next(el["id"] for el in st.session_state.elements if el["name"] == source_el)
+                    recv_id = next(el["id"] for el in st.session_state.elements if el["name"] == recv_el)
+                    
+                    # Avoid duplicates
+                    if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
+                        st.session_state.junctions.append({
+                            "id": f"j_{int(time.time() * 1000)}",
+                            "from": src_id,
+                            "to": recv_id
+                        })
+                        st.rerun()
+        else:
+            st.info("Create at least two elements to link.")
 
 
 # --- 5. Bottom Tool Messages (Fixed Footer) ---
