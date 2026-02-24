@@ -66,6 +66,46 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Initialize Session State Defaults
+defaults = {
+    "project_name": "Project xxxxxxxx",
+    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
+    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
+    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
+    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+        # Initialize widget keys to match defaults initially
+        ui_key = f"{k}_ui"
+        if k == "project_name": ui_key = "pname_ui"
+        st.session_state[ui_key] = v
+
+# Handle pending JSON loads BEFORE any widgets instantiate
+if "pending_load" in st.session_state:
+    loaded_data = st.session_state.pending_load
+    for section, params in loaded_data.items():
+        for k, v in params.items():
+            ui_key = f"{k}_ui"
+            if k == "project_name": ui_key = "pname_ui"
+            
+            # Apply to global variables
+            if k in st.session_state:
+                if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
+                    st.session_state[k] = float(v)
+                else:
+                    st.session_state[k] = str(v)
+            
+            # Apply to widget UI variables        
+            if ui_key in st.session_state:
+                if isinstance(st.session_state[ui_key], float) or isinstance(st.session_state[ui_key], int):
+                    st.session_state[ui_key] = float(v)
+                else:
+                    st.session_state[ui_key] = str(v)
+                    
+    del st.session_state.pending_load
+
 if "current_view" not in st.session_state:
     st.session_state.current_view = "Visualization"
 
@@ -89,18 +129,6 @@ st.markdown("---")
 
 
 # --- 2. Left Sidebar (Project Tree) ---
-
-# Initialize default values if not present
-defaults = {
-    "project_name": "Project xxxxxxxx",
-    "freq": 500.0, "rho0": 1.204, "c0": 343.0,
-    "v1": 60.0, "s1": 12.0, "t60_1": 0.6, "p1": 0.005,
-    "s2": 12.0, "m2": 200.0, "fc2": 150.0, "sig2": 1.0, "eta2": 0.05,
-    "v3": 72.0, "s3": 12.0, "t60_3": 0.7
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
 
 st.sidebar.markdown(f"### 🌲 {st.session_state.project_name}")
 st.sidebar.markdown("---")
@@ -273,27 +301,11 @@ with col_main:
                 file_id = f"{uploaded_file.name}_{uploaded_file.size}"
                 if "loaded_file_id" not in st.session_state or st.session_state.loaded_file_id != file_id:
                     try:
-                        loaded_data = json.load(uploaded_file)
-                        
-                        # Apply loaded data back to state
-                        for section, params in loaded_data.items():
-                            for k, v in params.items():
-                                if k in st.session_state:
-                                    if isinstance(st.session_state[k], float) or isinstance(st.session_state[k], int):
-                                        st.session_state[k] = float(v)
-                                    else:
-                                        st.session_state[k] = str(v)
-                                
-                                # Manually remove potentially stale UI widget states linked to this key
-                                ui_key = f"{k}_ui"
-                                if k == "project_name": ui_key = "pname_ui"
-                                if ui_key in st.session_state:
-                                    del st.session_state[ui_key]
-                                    
+                        st.session_state.pending_load = json.load(uploaded_file)
                         st.session_state.loaded_file_id = file_id
                         st.success("Project loaded successfully!")
                         st.info("Check the Model Elements tree to verify properties.")
-                        st.rerun()  # Force Streamlit to refresh the UI with new state values
+                        st.rerun()  # Force Streamlit to apply the pending load at the top of the script
                     except Exception as e:
                         st.error(f"Failed to load file. Error: {e}")
                 else:
