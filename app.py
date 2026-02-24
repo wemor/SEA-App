@@ -127,7 +127,8 @@ st.markdown("---")
 
 # --- 2. Left Sidebar (Project Tree) ---
 
-st.sidebar.markdown(f"### 🌲 {st.session_state.project_name}")
+current_pname = st.session_state.get("pname_ui", st.session_state.get("project_name", "Project xxxxxxxx"))
+st.sidebar.markdown(f"### 🌲 {current_pname}")
 st.sidebar.markdown("---")
 
 # Initialize Session State for Selection
@@ -169,54 +170,67 @@ st.sidebar.markdown(f"#### Edit: {st.session_state.selected_element}")
 
 if st.session_state.selected_element == "🌍 Global Setup":
     with st.sidebar:
-        pname = st.text_input("Project Name", value=st.session_state.project_name, key="pname_ui")
-        freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=float(st.session_state.freq), step=100.0, key="freq_ui")
-        rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=float(st.session_state.rho0), format="%.3f", key="rho0_ui")
-        c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=float(st.session_state.c0), format="%.1f", key="c0_ui")
+        st.text_input("Project Name", key="pname_ui")
+        st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, step=100.0, key="freq_ui")
+        st.number_input("Air Density $\\rho_0$ (kg/m³)", format="%.3f", key="rho0_ui")
+        st.number_input("Speed of Sound $c_0$ (m/s)", format="%.1f", key="c0_ui")
     
     # Sync visual inputs with backend state
-    st.session_state.project_name, st.session_state.freq, st.session_state.rho0, st.session_state.c0 = pname, freq, rho0, c0
+    st.session_state.project_name = st.session_state.pname_ui
+    st.session_state.freq = st.session_state.freq_ui
+    st.session_state.rho0 = st.session_state.rho0_ui
+    st.session_state.c0 = st.session_state.c0_ui
 
 elif st.session_state.selected_element == "Room 1 (Source)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        V1 = st.number_input("Volume (m³)", value=float(st.session_state.v1), key="v1_ui")
-        S1 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s1), key="s1_ui")
+        st.number_input("Volume (m³)", key="v1_ui")
+        st.number_input("Coupling Surface (m²)", key="s1_ui")
         st.markdown("**Acoustic Properties**")
-        T60_1 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_1), key="t60_1_ui")
+        st.number_input("Rev Time (s)", key="t60_1_ui")
         st.markdown("**Excitation**")
-        P1 = st.number_input("Input Power P1 (W)", value=float(st.session_state.p1), format="%.4f", key="p1_ui")
+        st.number_input("Input Power P1 (W)", format="%.4f", key="p1_ui")
     
-    st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1 = V1, S1, T60_1, P1
+    st.session_state.v1 = st.session_state.v1_ui
+    st.session_state.s1 = st.session_state.s1_ui
+    st.session_state.t60_1 = st.session_state.t60_1_ui
+    st.session_state.p1 = st.session_state.p1_ui
 
 elif st.session_state.selected_element == "Wall 2 (Division)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        S2 = st.number_input("Surface (m²)", value=float(st.session_state.s2), key="s2_ui")
-        m_2 = st.number_input("Area Density (kg/m²)", value=float(st.session_state.m2), key="m2_ui")
+        st.number_input("Surface (m²)", key="s2_ui")
+        st.number_input("Area Density (kg/m²)", key="m2_ui")
         st.markdown("**Structural Properties**")
-        fc_2 = st.number_input("Critical Freq (Hz)", value=float(st.session_state.fc2), key="fc2_ui")
-        sigma2 = st.number_input("Radiation Efficiency", value=float(st.session_state.sig2), key="sig2_ui")
-        eta2 = st.number_input("Internal Damping", value=float(st.session_state.eta2), key="eta2_ui")
+        st.number_input("Critical Freq (Hz)", key="fc2_ui")
+        st.number_input("Radiation Efficiency", key="sig2_ui")
+        st.number_input("Internal Damping", key="eta2_ui")
     
-    st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2 = S2, m_2, fc_2, sigma2, eta2
+    st.session_state.s2 = st.session_state.s2_ui
+    st.session_state.m2 = st.session_state.m2_ui
+    st.session_state.fc2 = st.session_state.fc2_ui
+    st.session_state.sig2 = st.session_state.sig2_ui
+    st.session_state.eta2 = st.session_state.eta2_ui
 
 elif st.session_state.selected_element == "Room 3 (Receiving)":
     with st.sidebar:
         st.markdown("**Geometric Properties**")
-        V3 = st.number_input("Volume (m³)", value=float(st.session_state.v3), key="v3_ui")
-        S3 = st.number_input("Coupling Surface (m²)", value=float(st.session_state.s3), key="s3_ui")
+        st.number_input("Volume (m³)", key="v3_ui")
+        st.number_input("Coupling Surface (m²)", key="s3_ui")
         st.markdown("**Acoustic Properties**")
-        T60_3 = st.number_input("Rev Time (s)", value=float(st.session_state.t60_3), key="t60_3_ui")
+        st.number_input("Rev Time (s)", key="t60_3_ui")
     
-    st.session_state.v3, st.session_state.s3, st.session_state.t60_3 = V3, S3, T60_3
+    st.session_state.v3 = st.session_state.v3_ui
+    st.session_state.s3 = st.session_state.s3_ui
+    st.session_state.t60_3 = st.session_state.t60_3_ui
 
 
-# Re-assign local variables for the calculation engine so it doesn't break
-freq, rho0, c0 = st.session_state.freq, st.session_state.rho0, st.session_state.c0
-V1, S1, T60_1, P1 = st.session_state.v1, st.session_state.s1, st.session_state.t60_1, st.session_state.p1
-S2, m_2, fc_2, sigma2, eta2 = st.session_state.s2, st.session_state.m2, st.session_state.fc2, st.session_state.sig2, st.session_state.eta2
-V3, S3, T60_3 = st.session_state.v3, st.session_state.s3, st.session_state.t60_3
+# Re-assign local variables for the calculation engine from the central _ui truth state
+project_name = st.session_state.get("pname_ui", st.session_state.project_name)
+freq, rho0, c0 = float(st.session_state.get("freq_ui", 500)), float(st.session_state.get("rho0_ui", 1.204)), float(st.session_state.get("c0_ui", 343))
+V1, S1, T60_1, P1 = float(st.session_state.get("v1_ui", 60)), float(st.session_state.get("s1_ui", 12)), float(st.session_state.get("t60_1_ui", 0.6)), float(st.session_state.get("p1_ui", 0.005))
+S2, m_2, fc_2, sigma2, eta2 = float(st.session_state.get("s2_ui", 12)), float(st.session_state.get("m2_ui", 200)), float(st.session_state.get("fc2_ui", 150)), float(st.session_state.get("sig2_ui", 1)), float(st.session_state.get("eta2_ui", 0.05))
+V3, S3, T60_3 = float(st.session_state.get("v3_ui", 72)), float(st.session_state.get("s3_ui", 12)), float(st.session_state.get("t60_3_ui", 0.7))
 
 omega = 2 * math.pi * freq
 eta1 = 2.2 / (T60_1 * freq) if T60_1 > 0 else 0
@@ -276,14 +290,14 @@ with col_main:
         with f_col1:
             st.markdown("#### Save Project")
             current_state_dict = {
-                "global": {"project_name": st.session_state.project_name, "freq": freq, "rho0": rho0, "c0": c0},
+                "global": {"project_name": project_name, "freq": freq, "rho0": rho0, "c0": c0},
                 "room_1": {"v1": V1, "s1": S1, "t60_1": T60_1, "p1": P1},
                 "wall_2": {"s2": S2, "m2": m_2, "fc2": fc_2, "sig2": sigma2, "eta2": eta2},
                 "room_3": {"v3": V3, "s3": S3, "t60_3": T60_3}
             }
             json_string = json.dumps(current_state_dict, indent=2)
             
-            p_name_clean = st.session_state.project_name.replace(" ", "_")
+            p_name_clean = project_name.replace(" ", "_")
             st.download_button(
                 label=f"⬇️ Download `{p_name_clean}.json`",
                 data=json_string,
