@@ -275,12 +275,12 @@ sea.set_power_input(idx1, P1)
 energies = sea.solve(freq)
 E1, E2, E3 = energies
 
-p1 = math.sqrt(E1 * rho0 * c0**2 / V1)
-Lp1 = 20 * math.log10(p1 / 20e-6)
-v2 = math.sqrt(E2 / M2)
-Lv2 = 20 * math.log10(v2 / 5e-8)
-p3 = math.sqrt(E3 * rho0 * c0**2 / V3)
-Lp3 = 20 * math.log10(p3 / 20e-6)
+p1 = math.sqrt(max(E1 * rho0 * c0**2 / V1, 1e-24))
+Lp1 = 20 * math.log10(max(p1 / 20e-6, 1e-12))
+v2 = math.sqrt(max(E2 / M2, 1e-24))
+Lv2 = 20 * math.log10(max(v2 / 5e-8, 1e-12))
+p3 = math.sqrt(max(E3 * rho0 * c0**2 / V3, 1e-24))
+Lp3 = 20 * math.log10(max(p3 / 20e-6, 1e-12))
 
 
 # --- 3. Main View & 4. Right Sidebar Area (Using Columns) ---
@@ -375,7 +375,7 @@ with col_right:
         new_name = f"Cavity {sum(1 for el in st.session_state.elements if el['type'] == 'Cavity') + 1}"
         st.session_state.elements.append({
             "id": new_id, "type": "Cavity", "name": new_name, 
-            "volume": 50.0, "surface": 10.0, "t60": 1.0, "power": 0.0
+            "volume": 50.0, "surface": 10.0, "t60": 1.0, "power": 0.005
         })
         st.session_state.selected_element = new_name
         st.rerun()
