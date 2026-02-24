@@ -216,6 +216,7 @@ elif active_el is not None:
 
 # --- DYNAMIC CALCULATION ENGINE ---
 
+project_name = st.session_state.project_name
 freq, rho0, c0 = float(st.session_state.freq), float(st.session_state.rho0), float(st.session_state.c0)
 omega = 2 * math.pi * freq
 
