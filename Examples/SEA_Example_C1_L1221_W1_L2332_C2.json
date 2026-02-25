@@ -1,0 +1,60 @@
+{
+  "global": {
+    "project_name": "SEA Example C1_L12_W1 C2 (Simplified)",
+    "freq": 500.0,
+    "rho0": 1.204,
+    "c0": 343.0
+  },
+  "elements": [
+    {
+      "id": "c_1",
+      "type": "Cavity",
+      "name": "Cavity 1",
+      "volume": 60.0,
+      "surface": 12.0,
+      "t60": 0.6,
+      "power": 0.005
+    },
+    {
+      "id": "w_1",
+      "type": "Wall",
+      "name": "Wall 1",
+      "surface": 12.0,
+      "density": 200.0,
+      "fc": 150.0,
+      "sigma": 1.0,
+      "eta": 0.05
+    },
+    {
+      "id": "c_2",
+      "type": "Cavity",
+      "name": "Cavity 2",
+      "volume": 72.0,
+      "surface": 12.0,
+      "t60": 0.7,
+      "power": 5e-08
+    }
+  ],
+  "junctions": [
+    {
+      "id": "j_1",
+      "from": "c_1",
+      "to": "w_1"
+    },
+    {
+      "id": "j_2",
+      "from": "c_2",
+      "to": "w_1"
+    },
+    {
+      "id": "j_3",
+      "from": "w_1",
+      "to": "c_1"
+    },
+    {
+      "id": "j_4",
+      "from": "w_1",
+      "to": "c_2"
+    }
+  ]
+}

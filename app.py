@@ -249,6 +249,17 @@ elif active_el is not None:
 
 # --- DYNAMIC CALCULATION ENGINE ---
 
+# Initialize intermediate results dictionary to hold DFLs, CLFs, Power, etc.
+if "intermediate_results" not in st.session_state:
+    st.session_state.intermediate_results = {
+        "dfl_data": [],
+        "clf_data": []
+    }
+
+# Reset before each run
+st.session_state.intermediate_results["dfl_data"] = []
+st.session_state.intermediate_results["clf_data"] = []
+
 project_name = st.session_state.project_name
 freq, rho0, c0 = float(st.session_state.freq), float(st.session_state.rho0), float(st.session_state.c0)
 omega = 2 * math.pi * freq
@@ -276,9 +287,20 @@ for el in st.session_state.elements:
     idx = sea.add_subsystem(sub)
     sys_indices[el["id"]] = idx
     
+    # Store intermediate DFL
+    power_val = 0.0
     # Register Power
     if el["type"] == "Cavity" and el.get("power", 0.0) > 0:
-        sea.set_power_input(idx, float(el["power"]))
+        power_val = float(el["power"])
+        sea.set_power_input(idx, power_val)
+        
+    st.session_state.intermediate_results["dfl_data"].append({
+        "ID": el["id"],
+        "Name": el["name"],
+        "Type": el["type"],
+        "DFL (eta_i)": f"{eta_internal:.4e}",
+        "Power (W)": f"{power_val:.4e}"
+    })
 
 # 2. Process Junctions (Coupling Loss Factors)
 for j in st.session_state.junctions:
@@ -310,6 +332,14 @@ for j in st.session_state.junctions:
             sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
             sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
             
+            # Store CLFs
+            st.session_state.intermediate_results["clf_data"].append({
+                "From": src["name"],
+                "To": recv["name"],
+                "CLF (eta_ij)": f"{eta_ij:.4e}",
+                "CLF (eta_ji)": f"{eta_ji:.4e}"
+            })
+            
         # Scenario B: Wall to Cavity
         elif src["type"] == "Wall" and recv["type"] == "Cavity":
             S2 = float(src["surface"])
@@ -327,6 +357,14 @@ for j in st.session_state.junctions:
                 
             sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
             sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
+
+            # Store CLFs
+            st.session_state.intermediate_results["clf_data"].append({
+                "From": src["name"],
+                "To": recv["name"],
+                "CLF (eta_ij)": f"{eta_ij:.4e}",
+                "CLF (eta_ji)": f"{eta_ji:.4e}"
+            })
             
         # Scenario C: Cavity to Cavity
         elif src["type"] == "Cavity" and recv["type"] == "Cavity":
@@ -343,6 +381,14 @@ for j in st.session_state.junctions:
                 
             sea.set_coupling_loss_factor(src_idx, recv_idx, eta_ij)
             sea.set_coupling_loss_factor(recv_idx, src_idx, eta_ji)
+
+            # Store CLFs
+            st.session_state.intermediate_results["clf_data"].append({
+                "From": src["name"],
+                "To": recv["name"],
+                "CLF (eta_ij)": f"{eta_ij:.4e}",
+                "CLF (eta_ji)": f"{eta_ji:.4e}"
+            })
             
         # Scenario D: Wall to Wall
         elif src["type"] == "Wall" and recv["type"] == "Wall":
@@ -443,11 +489,34 @@ with col_main:
         st.graphviz_chart(graph, use_container_width=True)
 
     elif st.session_state.current_view == "Results":
+        import pandas as pd
         st.markdown("### 📈 Calculation Results")
         
         if not st.session_state.elements:
             st.info("No elements to display. Add elements and connections first.")
         else:
+            
+            # --- 1. Element Parameters (DFL / Power) ---
+            st.markdown("#### 1. Subsystem Parameters")
+            if st.session_state.intermediate_results["dfl_data"]:
+                df_dfl = pd.DataFrame(st.session_state.intermediate_results["dfl_data"])
+                st.dataframe(df_dfl, use_container_width=True, hide_index=True)
+            else:
+                st.caption("No subsystems calculated.")
+
+            # --- 2. Coupling Parameters (CLF) ---
+            st.markdown("#### 2. Coupling Loss Factors (CLF)")
+            if st.session_state.intermediate_results["clf_data"]:
+                df_clf = pd.DataFrame(st.session_state.intermediate_results["clf_data"])
+                st.dataframe(df_clf, use_container_width=True, hide_index=True)
+            else:
+                st.caption("No junctions calculated.")
+
+            st.markdown("---")
+            
+            # --- 3. Final Energies and Levels ---
+            st.markdown("#### 3. Energy and Acoustic Levels")
+            
             # Dynamically create columns based on number of elements
             cols = st.columns(min(len(st.session_state.elements), 4))
             
@@ -455,6 +524,44 @@ with col_main:
                 col = cols[i % len(cols)]
                 res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
                 col.metric(el["name"], f"{res['L']:.1f} {res['unit'][-3:]}", f"E: {res['E']:.2e} J")
+                
+            st.markdown("---")
+            
+            # --- 4. Markdown Export ---
+            md_content = f"# SEA Calculation Results: {project_name}\n"
+            md_content += f"**Frequency:** {freq} Hz | **Air Density:** {rho0} kg/m³ | **Speed of Sound:** {c0} m/s\n\n"
+            
+            md_content += "## 1. Subsystem Parameters\n\n"
+            if st.session_state.intermediate_results["dfl_data"]:
+                md_content += df_dfl.to_markdown(index=False) + "\n\n"
+            else:
+                md_content += "No subsystems calculated.\n\n"
+
+            md_content += "## 2. Coupling Loss Factors (CLF)\n\n"
+            if st.session_state.intermediate_results["clf_data"]:
+                md_content += df_clf.to_markdown(index=False) + "\n\n"
+            else:
+                md_content += "No junctions calculated.\n\n"
+                
+            md_content += "## 3. Energy and Acoustic Levels\n\n"
+            if st.session_state.elements:
+                final_res = []
+                for el in st.session_state.elements:
+                    res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
+                    final_res.append({
+                        "Element": el["name"],
+                        "Energy (J)": f"{res['E']:.4e}",
+                        "Level": f"{res['L']:.1f} {res['unit'][-3:]}"
+                    })
+                df_final = pd.DataFrame(final_res)
+                md_content += df_final.to_markdown(index=False) + "\n\n"
+            
+            st.download_button(
+                label="📄 Download Results as Markdown",
+                data=md_content,
+                file_name=f"{project_name.replace(' ', '_')}_Results.md",
+                mime="text/markdown"
+            )
 
     elif st.session_state.current_view == "Calculation":
         st.success("Calculation complete!")
