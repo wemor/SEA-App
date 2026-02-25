@@ -80,6 +80,15 @@ if "elements" not in st.session_state:
 if "junctions" not in st.session_state:
     st.session_state.junctions = []
 
+if "cavity_id_counter" not in st.session_state:
+    st.session_state.cavity_id_counter = 1
+
+if "wall_id_counter" not in st.session_state:
+    st.session_state.wall_id_counter = 1
+
+if "junction_id_counter" not in st.session_state:
+    st.session_state.junction_id_counter = 1
+
 # Load Project Callback
 def load_project_callback():
     uploaded_file = st.session_state.get("uploaded_project_file")
@@ -102,6 +111,30 @@ def load_project_callback():
                 valid_names = [el["name"] for el in st.session_state.elements]
                 if st.session_state.get("selected_element") not in valid_names and st.session_state.get("selected_element") != "🌍 Global Setup":
                      st.session_state.selected_element = "🌍 Global Setup"
+
+            if "junctions" in loaded_data:
+                st.session_state.junctions = loaded_data["junctions"]
+                
+            # Update ID counters based on loaded data to prevent collisions
+            max_c_id = 0
+            max_w_id = 0
+            for el in st.session_state.elements:
+                if el["id"].startswith("c_"):
+                    try: max_c_id = max(max_c_id, int(el["id"].split("_")[1]))
+                    except (ValueError, IndexError): pass
+                elif el["id"].startswith("w_"):
+                    try: max_w_id = max(max_w_id, int(el["id"].split("_")[1]))
+                    except (ValueError, IndexError): pass
+                    
+            max_j_id = 0
+            for j in st.session_state.junctions:
+                if j["id"].startswith("j_"):
+                    try: max_j_id = max(max_j_id, int(j["id"].split("_")[1]))
+                    except (ValueError, IndexError): pass
+                    
+            st.session_state.cavity_id_counter = max_c_id + 1
+            st.session_state.wall_id_counter = max_w_id + 1
+            st.session_state.junction_id_counter = max_j_id + 1
 
             st.session_state.load_success = True
             st.session_state.load_error = None
@@ -439,7 +472,8 @@ with col_right:
     st.markdown("### 🧱 SEA Elements")
     
     if st.button("Cavity", use_container_width=True):
-        new_id = f"c_{int(time.time() * 1000)}"
+        new_id = f"c_{st.session_state.cavity_id_counter}"
+        st.session_state.cavity_id_counter += 1
         new_name = f"Cavity {sum(1 for el in st.session_state.elements if el['type'] == 'Cavity') + 1}"
         st.session_state.elements.append({
             "id": new_id, "type": "Cavity", "name": new_name, 
@@ -449,7 +483,8 @@ with col_right:
         st.rerun()
         
     if st.button("Wall", use_container_width=True):
-        new_id = f"w_{int(time.time() * 1000)}"
+        new_id = f"w_{st.session_state.wall_id_counter}"
+        st.session_state.wall_id_counter += 1
         new_name = f"Wall {sum(1 for el in st.session_state.elements if el['type'] == 'Wall') + 1}"
         st.session_state.elements.append({
             "id": new_id, "type": "Wall", "name": new_name, 
@@ -484,8 +519,10 @@ with col_right:
                     else:
                         # Avoid duplicates
                         if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
+                            new_j_id = f"j_{st.session_state.junction_id_counter}"
+                            st.session_state.junction_id_counter += 1
                             st.session_state.junctions.append({
-                                "id": f"j_{int(time.time() * 1000)}",
+                                "id": new_j_id,
                                 "from": src_id,
                                 "to": recv_id
                             })
