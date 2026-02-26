@@ -12,7 +12,14 @@ Genauso wie für deine Sales Logbook App benötigst du den Admin-Schlüssel:
 3. Klicke auf **"Neuen privaten Schlüssel generieren"** (Generate new private key).
 4. Es wird eine `.json`-Datei heruntergeladen. 
 
-## 2. In Streamlit Cloud eintragen (Live-App)
+## 2. Firestore Datenbank aktivieren (Nur bei neuen Projekten)
+Falls du für die SEA-App ein komplett neues Firebase-Projekt erstellt hast, ist die Datenbank anfangs noch deaktiviert:
+1. Klicke in der Firebase Console im linken Menü unter "Build" auf **"Firestore Database"**.
+2. Klicke auf **"Create database"**.
+3. Lass den Standort auf dem Standard und klicke auf "Next".
+4. Wähle **"Start in test mode"** und klicke auf **"Enable"**.
+
+## 3. In Streamlit Cloud eintragen (Live-App)
 Damit die öffentlich gehostete Cloud-App funktioniert:
 1. Gehe in dein [Streamlit Cloud Dashboard](https://share.streamlit.io/).
 2. Klicke bei deiner SEA-App auf die 3 Punkte `...` -> **Settings** -> **Secrets**.
@@ -37,7 +44,7 @@ client_x509_cert_url = "https://www.googleapis.com/..."
 
 *(Streamlit konvertiert typischerweise JSON-Datenstruktur sehr einfach in TOML - die Einrückung oder Quotes müssen wie oben abgebildet sein).*
 
-## 3. Lokal testen (Auf deinem PC)
+## 4. Lokal testen (Auf deinem PC)
 Wenn du die App lokal auf deinem Computer via `streamlit run app.py` testen möchtest:
 1. Erstelle lokal in deinem Workspace (`C:\Users\WernerMoretti\OneDrive - wemo\Antigravity_WS\SEA-App`) einen neuen Ordner namens `.streamlit`, falls er noch nicht existiert.
 2. Erstelle darin eine Datei namens `secrets.toml`.
