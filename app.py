@@ -12,42 +12,10 @@ st.set_page_config(page_title="SEA App", page_icon="🌊", layout="wide")
 
 st.markdown("<h3>🌊 Statistical Energy Analysis (SEA) App</h3>", unsafe_allow_html=True)
 
-# --- 1. Top Toolbar (Simulated) & Global Theming ---
+# --- 1. Top Toolbar (Native Streamlit Tabs) ---
 st.markdown(
     """
     <style>
-    /* Simulated Toolbar */
-    .toolbar-container {
-        display: flex;
-        gap: 10px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #30363d;
-        margin-bottom: 20px;
-    }
-    .toolbar-button {
-        padding: 8px 16px;
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 4px;
-        cursor: pointer;
-        text-align: center;
-        flex: 1;
-        font-weight: 500;
-        color: #e6edf3;
-        transition: all 0.2s;
-    }
-    .toolbar-button:hover {
-        border-color: #58a6ff;
-        color: #58a6ff;
-    }
-    .toolbar-title {
-        flex: 2;
-        text-align: center;
-        font-weight: bold;
-        align-self: center;
-        color: #e6edf3;
-    }
-
     /* Fixed Footer Messaging */
     .footer-msg {
         position: fixed;
@@ -62,6 +30,13 @@ st.markdown(
         border-top: 1px solid #30363d;
         z-index: 1000;
     }
+    
+    /* Graphviz Background Overrides */
+    [data-testid="stGraphVizChart"] {
+        background-color: #d0d4dc;
+        padding: 1rem;
+        border-radius: 8px;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -69,7 +44,7 @@ st.markdown(
 
 # Initialize Session State Defaults (Phase 2 Dynamic Elements)
 if "project_name" not in st.session_state:
-    st.session_state.project_name = "Project xxxxxxxx"
+    st.session_state.project_name = "Project Name"
     st.session_state.freq = 500.0
     st.session_state.rho0 = 1.204
     st.session_state.c0 = 343.0
@@ -142,38 +117,21 @@ def load_project_callback():
             st.session_state.load_success = False
             st.session_state.load_error = str(e)
 
-if "current_view" not in st.session_state:
-    st.session_state.current_view = "Visualization"
+# Create Native Streamlit Tabs
+tab_model, tab_file, tab_calc, tab_res, tab_help = st.tabs(["📊 Model", "💾 File", "🧮 Calc", "📈 Results", "❓ Help"])
 
-# Native Streamlit Toolbar
-t_col1, t_col2, t_col3, t_col4, t_col5, t_spacer, t_col6 = st.columns([1, 1, 1, 1, 1, 3, 1])
-
-with t_col1:
-    if st.button("File", use_container_width=True): st.session_state.current_view = "File"
-with t_col2:
-    if st.button("Visualization", use_container_width=True): st.session_state.current_view = "Visualization"
-with t_col3:
-    if st.button("Calculation", use_container_width=True): st.session_state.current_view = "Calculation"
-with t_col4:
-    if st.button("Results", use_container_width=True): st.session_state.current_view = "Results"
-with t_col5:
-    if st.button("Materials", use_container_width=True): pass
-with t_col6:
-    if st.button("Help", use_container_width=True): st.session_state.current_view = "Help"
-
-st.markdown("---")
-
-
-# --- 2. Left Sidebar (Project Tree) ---
+# --- 2. Left Sidebar (Project Tree & Tools) ---
 
 st.sidebar.markdown(f"### 🌲 {st.session_state.project_name}")
 st.sidebar.markdown("---")
+
+st.sidebar.markdown("### ⚙️ System Setup")
 
 # Initialize Session State for Selection
 if "selected_element" not in st.session_state:
     st.session_state.selected_element = "🌍 Global Setup"
 
-with st.sidebar.expander("[-] Model Elements", expanded=True):
+with st.sidebar.expander("🌲 System Tree", expanded=True):
     # Dynamic tree generation
     tree_options = ["🌍 Global Setup"]
     for i, el in enumerate(st.session_state.elements):
@@ -189,39 +147,30 @@ with st.sidebar.expander("[-] Model Elements", expanded=True):
             st.session_state.selected_element = el['name']
             break
 
-
-st.sidebar.markdown("---")
-st.sidebar.markdown(f"#### Edit: {st.session_state.selected_element}")
-
-# Input Parameters - Conditionally Displayed based on Selection
-# We still need to keep the values in session state or default variables to calculate the graph!
-# In a real app we'd load this from a project dict, here we use Streamlit keys and defaults.
-
 # DYNAMIC PROPERTIES EDITOR
-# Find the currently selected element dictionary
-active_el = None
-active_el_idx = None
-for i, el in enumerate(st.session_state.elements):
-    if el['name'] == st.session_state.selected_element:
-        active_el = el
-        active_el_idx = i
-        break
+with st.sidebar.expander(f"✎ Edit: {st.session_state.selected_element}", expanded=False):
+    # Find the currently selected element dictionary
+    active_el = None
+    active_el_idx = None
+    for i, el in enumerate(st.session_state.elements):
+        if el['name'] == st.session_state.selected_element:
+            active_el = el
+            active_el_idx = i
+            break
 
-if st.session_state.selected_element == "🌍 Global Setup":
-    with st.sidebar:
+    if st.session_state.selected_element == "🌍 Global Setup":
         pname = st.text_input("Project Name", value=st.session_state.project_name)
         freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=float(st.session_state.freq), step=100.0)
         rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=float(st.session_state.rho0), format="%.3f")
         c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=float(st.session_state.c0), format="%.1f")
-    
-    # Sync visual inputs with backend state
-    st.session_state.project_name = pname
-    st.session_state.freq = freq
-    st.session_state.rho0 = rho0
-    st.session_state.c0 = c0
+        
+        # Sync visual inputs with backend state
+        st.session_state.project_name = pname
+        st.session_state.freq = freq
+        st.session_state.rho0 = rho0
+        st.session_state.c0 = c0
 
-elif active_el is not None:
-    with st.sidebar:
+    elif active_el is not None:
         # Edit Name
         st.markdown("**General Properties**")
         new_name = st.text_input("Element Name", value=active_el["name"])
@@ -244,6 +193,72 @@ elif active_el is not None:
             st.session_state.elements[active_el_idx]["fc"] = st.number_input("Critical Freq (Hz)", value=float(active_el["fc"]))
             st.session_state.elements[active_el_idx]["sigma"] = st.number_input("Radiation Efficiency", value=float(active_el["sigma"]))
             st.session_state.elements[active_el_idx]["eta"] = st.number_input("Internal Damping", value=float(active_el["eta"]))
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ➕ Add Elements")
+with st.sidebar.expander("Create New Element", expanded=False):
+    f_col1, f_col2 = st.columns(2)
+    with f_col1:
+        if st.button("Cavity", use_container_width=True):
+            new_id = f"c_{st.session_state.cavity_id_counter}"
+            st.session_state.cavity_id_counter += 1
+            new_name = f"Cavity {sum(1 for el in st.session_state.elements if el['type'] == 'Cavity') + 1}"
+            st.session_state.elements.append({
+                "id": new_id, "type": "Cavity", "name": new_name, 
+                "volume": 50.0, "surface": 10.0, "t60": 1.0, "power": 0.005
+            })
+            st.session_state.selected_element = new_name
+            st.rerun()
+    with f_col2:
+        if st.button("Wall", use_container_width=True):
+            new_id = f"w_{st.session_state.wall_id_counter}"
+            st.session_state.wall_id_counter += 1
+            new_name = f"Wall {sum(1 for el in st.session_state.elements if el['type'] == 'Wall') + 1}"
+            st.session_state.elements.append({
+                "id": new_id, "type": "Wall", "name": new_name, 
+                "surface": 10.0, "density": 100.0, "fc": 250.0, "sigma": 1.0, "eta": 0.02
+            })
+            st.session_state.selected_element = new_name
+            st.rerun()
+            
+    f_col3, f_col4 = st.columns(2)
+    with f_col3:
+        st.button("Plate", use_container_width=True, disabled=True)
+    with f_col4:
+        st.button("Beam", use_container_width=True, disabled=True)
+
+st.sidebar.markdown("### 🔗 Add Connections")
+with st.sidebar.expander("Add Junction", expanded=False):
+    if len(st.session_state.elements) >= 2:
+        el_names = [el["name"] for el in st.session_state.elements]
+        source_el = st.selectbox("From (Source)", el_names, key="j_src")
+        recv_el = st.selectbox("To (Receiving)", el_names, key="j_recv")
+        
+        if st.button("Create Link", use_container_width=True):
+            if source_el != recv_el:
+                src_id = next(el["id"] for el in st.session_state.elements if el["name"] == source_el)
+                recv_id = next(el["id"] for el in st.session_state.elements if el["name"] == recv_el)
+                
+                # Block Wall to Wall Structural transmission as per user logic
+                # We still allow the user to click the button but we throw an error label
+                src_obj = next((e for e in st.session_state.elements if e["name"] == source_el), None)
+                recv_obj = next((e for e in st.session_state.elements if e["name"] == recv_el), None)
+                
+                if src_obj and recv_obj and src_obj["type"] == "Wall" and recv_obj["type"] == "Wall":
+                    st.error("Direct Wall-to-Wall structural transmission is not yet permitted in this model.")
+                else:
+                    # Avoid duplicates
+                    if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
+                        new_j_id = f"j_{st.session_state.junction_id_counter}"
+                        st.session_state.junction_id_counter += 1
+                        st.session_state.junctions.append({
+                            "id": new_j_id,
+                            "from": src_id,
+                            "to": recv_id
+                        })
+                        st.rerun()
+    else:
+        st.info("Create at least two elements to link.")
 
 
 
@@ -416,229 +431,162 @@ for i, el in enumerate(st.session_state.elements):
         st.session_state.results[el["id"]] = {"E": E, "L": Lv, "unit": "Lv (dB)"}
 
 
-# --- 3. Main View & 4. Right Sidebar Area (Using Columns) ---
-# Create a 5:1 ratio layout to make the right side much narrower
-col_main, col_right = st.columns([5, 1])
+# --- 3. Main View (Tabs Content) ---
 
-with col_main:
+with tab_model:
+    # Graph Visualization
+    graph = graphviz.Digraph()
+    graph.attr(bgcolor='transparent', rankdir='LR')
     
-    if st.session_state.current_view == "File":
-        st.markdown("### 💾 Project File Management")
+    # Draw Nodes dynamically
+    for el in st.session_state.elements:
+        short_id = el["id"][-4:]
         
-        f_col1, f_col2 = st.columns(2)
+        # Retrieve node result if available
+        res_str = ""
+        if "results" in st.session_state and el["id"] in st.session_state.results:
+            res = st.session_state.results[el["id"]]
+            res_str = f"\\n{res['unit'][:2]} = {res['L']:.1f} dB"
         
-        with f_col1:
-            st.markdown("#### Save Project")
-            current_state_dict = {
-                "global": {"project_name": project_name, "freq": freq, "rho0": rho0, "c0": c0},
-                "elements": st.session_state.elements,
-                "junctions": st.session_state.junctions
-            }
-            json_string = json.dumps(current_state_dict, indent=2)
-            
-            p_name_clean = project_name.replace(" ", "_")
-            st.download_button(
-                label=f"⬇️ Download `{p_name_clean}.json`",
-                data=json_string,
-                file_name=f"{p_name_clean}.json",
-                mime="application/json"
-            )
-            
-        with f_col2:
-            st.markdown("#### Load Project")
-            st.file_uploader("Upload a saved `.json` project file", type="json", key="uploaded_project_file", on_change=load_project_callback)
-            
-            # Display status after callback execution
-            if st.session_state.get("load_success"):
-                st.success("Project loaded successfully!")
-                st.info("Check the Model Elements tree to verify properties.")
-            elif st.session_state.get("load_error"):
-                st.error(f"Failed to load file. Error: {st.session_state.load_error}")
-
-    elif st.session_state.current_view == "Visualization":
-        # Graph Visualization
-        graph = graphviz.Digraph()
-        graph.attr(rankdir='LR')
-        
-        # Draw Nodes dynamically
-        for el in st.session_state.elements:
-            short_id = el["id"][-4:]
-            
-            # Retrieve node result if available
-            res_str = ""
-            if "results" in st.session_state and el["id"] in st.session_state.results:
-                res = st.session_state.results[el["id"]]
-                res_str = f"\\n{res['unit'][:2]} = {res['L']:.1f} dB"
-            
-            if el["type"] == "Cavity":
-                graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#cce5ff', shape='box')
-            elif el["type"] == "Wall":
-                graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#e2e3e5', shape='box')
-            else:
-                graph.node(short_id, el['name'], style='filled', fillcolor='#f8d7da', shape='box')
-                
-        # Draw Edges dynamically
-        for j in st.session_state.junctions:
-            src_short = j["from"][-4:]
-            recv_short = j["to"][-4:]
-            graph.edge(src_short, recv_short, label="linked")
-            
-        if len(st.session_state.elements) == 0:
-            graph.node('Empty', 'No elements created yet.\\nAdd them from the right sidebar.', style='dashed', shape='box')
-            
-        st.graphviz_chart(graph, use_container_width=True)
-
-    elif st.session_state.current_view == "Results":
-        import pandas as pd
-        st.markdown("### 📈 Calculation Results")
-        
-        if not st.session_state.elements:
-            st.info("No elements to display. Add elements and connections first.")
+        if el["type"] == "Cavity":
+            graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#cce5ff', shape='box')
+        elif el["type"] == "Wall":
+            graph.node(short_id, f"{el['name']}{res_str}", style='filled', fillcolor='#e2e3e5', shape='box')
         else:
+            graph.node(short_id, el['name'], style='filled', fillcolor='#f8d7da', shape='box')
             
-            # --- 1. Element Parameters (DFL / Power) ---
-            st.markdown("#### 1. Subsystem Parameters")
-            if st.session_state.intermediate_results["dfl_data"]:
-                df_dfl = pd.DataFrame(st.session_state.intermediate_results["dfl_data"])
-                st.dataframe(df_dfl, use_container_width=True, hide_index=True)
-            else:
-                st.caption("No subsystems calculated.")
+    # Draw Edges dynamically
+    for j in st.session_state.junctions:
+        src_short = j["from"][-4:]
+        recv_short = j["to"][-4:]
+        graph.edge(src_short, recv_short, label="linked")
+        
+    if len(st.session_state.elements) == 0:
+        graph.node('Empty', 'No elements created yet.\\nAdd them from the left sidebar.', style='dashed', shape='box')
+        
+    st.graphviz_chart(graph, use_container_width=True)
 
-            # --- 2. Coupling Parameters (CLF) ---
-            st.markdown("#### 2. Coupling Loss Factors (CLF)")
-            if st.session_state.intermediate_results["clf_data"]:
-                df_clf = pd.DataFrame(st.session_state.intermediate_results["clf_data"])
-                st.dataframe(df_clf, use_container_width=True, hide_index=True)
-            else:
-                st.caption("No junctions calculated.")
+with tab_file:
+    st.markdown("### 💾 Project File Management")
+    
+    f_col1, f_col2 = st.columns(2)
+    
+    with f_col1:
+        st.markdown("#### Save Project")
+        current_state_dict = {
+            "global": {"project_name": project_name, "freq": freq, "rho0": rho0, "c0": c0},
+            "elements": st.session_state.elements,
+            "junctions": st.session_state.junctions
+        }
+        json_string = json.dumps(current_state_dict, indent=2)
+        
+        p_name_clean = project_name.replace(" ", "_")
+        st.download_button(
+            label=f"⬇️ Download `{p_name_clean}.json`",
+            data=json_string,
+            file_name=f"{p_name_clean}.json",
+            mime="application/json"
+        )
+        
+    with f_col2:
+        st.markdown("#### Load Project")
+        st.file_uploader("Upload a saved `.json` project file", type="json", key="uploaded_project_file", on_change=load_project_callback)
+        
+        # Display status after callback execution
+        if st.session_state.get("load_success"):
+            st.success("Project loaded successfully!")
+            st.info("Check the Model Elements tree to verify properties.")
+        elif st.session_state.get("load_error"):
+            st.error(f"Failed to load file. Error: {st.session_state.load_error}")
 
-            st.markdown("---")
+with tab_res:
+    import pandas as pd
+    st.markdown("### 📈 Calculation Results")
+    
+    if not st.session_state.elements:
+        st.info("No elements to display. Add elements and connections first.")
+    else:
+        
+        # --- 1. Element Parameters (DFL / Power) ---
+        st.markdown("#### 1. Subsystem Parameters")
+        if st.session_state.intermediate_results["dfl_data"]:
+            df_dfl = pd.DataFrame(st.session_state.intermediate_results["dfl_data"])
+            st.dataframe(df_dfl, use_container_width=True, hide_index=True)
+        else:
+            st.caption("No subsystems calculated.")
+
+        # --- 2. Coupling Parameters (CLF) ---
+        st.markdown("#### 2. Coupling Loss Factors (CLF)")
+        if st.session_state.intermediate_results["clf_data"]:
+            df_clf = pd.DataFrame(st.session_state.intermediate_results["clf_data"])
+            st.dataframe(df_clf, use_container_width=True, hide_index=True)
+        else:
+            st.caption("No junctions calculated.")
+
+        st.markdown("---")
+        
+        # --- 3. Final Energies and Levels ---
+        st.markdown("#### 3. Energy and Acoustic Levels")
+        
+        # Dynamically create columns based on number of elements
+        cols = st.columns(min(len(st.session_state.elements), 4))
+        
+        for i, el in enumerate(st.session_state.elements):
+            col = cols[i % len(cols)]
+            res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
+            col.metric(el["name"], f"{res['L']:.1f} {res['unit'][-3:]}", f"E: {res['E']:.2e} J")
             
-            # --- 3. Final Energies and Levels ---
-            st.markdown("#### 3. Energy and Acoustic Levels")
+        st.markdown("---")
+        
+        # --- 4. Markdown Export ---
+        md_content = f"# SEA Calculation Results: {project_name}\n"
+        md_content += f"**Frequency:** {freq} Hz | **Air Density:** {rho0} kg/m³ | **Speed of Sound:** {c0} m/s\n\n"
+        
+        md_content += "## 1. Subsystem Parameters\n\n"
+        if st.session_state.intermediate_results["dfl_data"]:
+            md_content += df_dfl.to_markdown(index=False) + "\n\n"
+        else:
+            md_content += "No subsystems calculated.\n\n"
+
+        md_content += "## 2. Coupling Loss Factors (CLF)\n\n"
+        if st.session_state.intermediate_results["clf_data"]:
+            md_content += df_clf.to_markdown(index=False) + "\n\n"
+        else:
+            md_content += "No junctions calculated.\n\n"
             
-            # Dynamically create columns based on number of elements
-            cols = st.columns(min(len(st.session_state.elements), 4))
-            
-            for i, el in enumerate(st.session_state.elements):
-                col = cols[i % len(cols)]
+        md_content += "## 3. Energy and Acoustic Levels\n\n"
+        if st.session_state.elements:
+            final_res = []
+            for el in st.session_state.elements:
                 res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
-                col.metric(el["name"], f"{res['L']:.1f} {res['unit'][-3:]}", f"E: {res['E']:.2e} J")
-                
-            st.markdown("---")
-            
-            # --- 4. Markdown Export ---
-            md_content = f"# SEA Calculation Results: {project_name}\n"
-            md_content += f"**Frequency:** {freq} Hz | **Air Density:** {rho0} kg/m³ | **Speed of Sound:** {c0} m/s\n\n"
-            
-            md_content += "## 1. Subsystem Parameters\n\n"
-            if st.session_state.intermediate_results["dfl_data"]:
-                md_content += df_dfl.to_markdown(index=False) + "\n\n"
-            else:
-                md_content += "No subsystems calculated.\n\n"
-
-            md_content += "## 2. Coupling Loss Factors (CLF)\n\n"
-            if st.session_state.intermediate_results["clf_data"]:
-                md_content += df_clf.to_markdown(index=False) + "\n\n"
-            else:
-                md_content += "No junctions calculated.\n\n"
-                
-            md_content += "## 3. Energy and Acoustic Levels\n\n"
-            if st.session_state.elements:
-                final_res = []
-                for el in st.session_state.elements:
-                    res = st.session_state.results.get(el["id"], {"E": 0.0, "L": 0.0, "unit": "-"})
-                    final_res.append({
-                        "Element": el["name"],
-                        "Energy (J)": f"{res['E']:.4e}",
-                        "Level": f"{res['L']:.1f} {res['unit'][-3:]}"
-                    })
-                df_final = pd.DataFrame(final_res)
-                md_content += df_final.to_markdown(index=False) + "\n\n"
-            
-            st.download_button(
-                label="📄 Download Results as Markdown",
-                data=md_content,
-                file_name=f"{project_name.replace(' ', '_')}_Results.md",
-                mime="text/markdown"
-            )
-
-    elif st.session_state.current_view == "Calculation":
-        st.success("Calculation complete!")
-        st.info(f"SEA Energy matrix solved for f = {int(freq)} Hz.")
-        st.markdown("Navigate to **Results** to see detailed acoustic metrics, or **Visualization** to see updated graph edge weights.")
-
-    elif st.session_state.current_view == "Help":
-        try:
-            with open("docs/manual.md", "r", encoding="utf-8") as f:
-                st.markdown(f.read())
-        except FileNotFoundError:
-            st.warning("Help manual not found at `docs/manual.md`.")
-
-with col_right:
-    st.markdown("### 🧱 SEA Elements")
-    
-    if st.button("Cavity", use_container_width=True):
-        new_id = f"c_{st.session_state.cavity_id_counter}"
-        st.session_state.cavity_id_counter += 1
-        new_name = f"Cavity {sum(1 for el in st.session_state.elements if el['type'] == 'Cavity') + 1}"
-        st.session_state.elements.append({
-            "id": new_id, "type": "Cavity", "name": new_name, 
-            "volume": 50.0, "surface": 10.0, "t60": 1.0, "power": 0.005
-        })
-        st.session_state.selected_element = new_name
-        st.rerun()
+                final_res.append({
+                    "Element": el["name"],
+                    "Energy (J)": f"{res['E']:.4e}",
+                    "Level": f"{res['L']:.1f} {res['unit'][-3:]}"
+                })
+            df_final = pd.DataFrame(final_res)
+            md_content += df_final.to_markdown(index=False) + "\n\n"
         
-    if st.button("Wall", use_container_width=True):
-        new_id = f"w_{st.session_state.wall_id_counter}"
-        st.session_state.wall_id_counter += 1
-        new_name = f"Wall {sum(1 for el in st.session_state.elements if el['type'] == 'Wall') + 1}"
-        st.session_state.elements.append({
-            "id": new_id, "type": "Wall", "name": new_name, 
-            "surface": 10.0, "density": 100.0, "fc": 250.0, "sigma": 1.0, "eta": 0.02
-        })
-        st.session_state.selected_element = new_name
-        st.rerun()
-        
-    st.button("Plate", use_container_width=True, disabled=True)
-    st.button("Beam", use_container_width=True, disabled=True)
-    
-    st.markdown("---")
-    st.markdown("### 🔗 Connections")
-    with st.expander("Add Junction", expanded=False):
-        if len(st.session_state.elements) >= 2:
-            el_names = [el["name"] for el in st.session_state.elements]
-            source_el = st.selectbox("From (Source)", el_names, key="j_src")
-            recv_el = st.selectbox("To (Receiving)", el_names, key="j_recv")
-            
-            if st.button("Create Link", use_container_width=True):
-                if source_el != recv_el:
-                    src_id = next(el["id"] for el in st.session_state.elements if el["name"] == source_el)
-                    recv_id = next(el["id"] for el in st.session_state.elements if el["name"] == recv_el)
-                    
-                    # Block Wall to Wall Structural transmission as per user logic
-                    # We still allow the user to click the button but we throw an error label
-                    src_obj = next((e for e in st.session_state.elements if e["name"] == source_el), None)
-                    recv_obj = next((e for e in st.session_state.elements if e["name"] == recv_el), None)
-                    
-                    if src_obj and recv_obj and src_obj["type"] == "Wall" and recv_obj["type"] == "Wall":
-                        st.error("Direct Wall-to-Wall structural transmission is not yet permitted in this model.")
-                    else:
-                        # Avoid duplicates
-                        if not any(j["from"] == src_id and j["to"] == recv_id for j in st.session_state.junctions):
-                            new_j_id = f"j_{st.session_state.junction_id_counter}"
-                            st.session_state.junction_id_counter += 1
-                            st.session_state.junctions.append({
-                                "id": new_j_id,
-                                "from": src_id,
-                                "to": recv_id
-                            })
-                            st.rerun()
-        else:
-            st.info("Create at least two elements to link.")
+        st.download_button(
+            label="📄 Download Results as Markdown",
+            data=md_content,
+            file_name=f"{project_name.replace(' ', '_')}_Results.md",
+            mime="text/markdown"
+        )
 
+with tab_calc:
+    st.success("Calculation complete!")
+    st.info(f"SEA Energy matrix solved for f = {int(freq)} Hz.")
+    st.markdown("Navigate to **Results** to see detailed acoustic metrics, or **Model** to see updated graph edge weights.")
 
-# --- 5. Bottom Tool Messages (Fixed Footer) ---
+with tab_help:
+    try:
+        with open("docs/manual.md", "r", encoding="utf-8") as f:
+            st.markdown(f.read())
+    except FileNotFoundError:
+        st.warning("Help manual not found at `docs/manual.md`.")
+
+# --- 4. Bottom Tool Messages (Fixed Footer) ---
 st.markdown(
     '<div class="footer-msg">Ready. Calculation updated for f = {} Hz.</div>'.format(int(freq)),
     unsafe_allow_html=True
