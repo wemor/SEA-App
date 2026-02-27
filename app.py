@@ -607,15 +607,15 @@ with tab_file:
                                 st.error(f"Error loading from Firebase: {e}")
                 
                 with cl_del:
-                    if st.button("🗑️ Delete Project", type="primary", use_container_width=True):
+                    if st.button("🗑️ Delete Project File", type="primary", use_container_width=True):
                         with st.spinner("Deleting from Firestore..."):
                             try:
                                 db.collection("sea_projects").document(selected_cloud_project).delete()
-                                st.success(f"Project '{selected_cloud_project}' deleted successfully!")
+                                st.success(f"Project file '{selected_cloud_project}' deleted successfully from Cloud!")
                                 time.sleep(1)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Error deleting from Firebase: {e}")
+                                st.error(f"Error deleting project file from Firebase: {e}")
             else:
                 st.info("No projects found in Firebase Database.")
 
