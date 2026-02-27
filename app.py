@@ -65,6 +65,7 @@ st.markdown(
 # Initialize Session State Defaults (Phase 2 Dynamic Elements)
 if "project_name" not in st.session_state:
     st.session_state.project_name = "Project Name"
+    st.session_state.variant_name = "Variant 1"
     st.session_state.freq = 500.0
     st.session_state.rho0 = 1.204
     st.session_state.c0 = 343.0
@@ -180,12 +181,14 @@ with st.sidebar.expander(f"✎ Edit: {st.session_state.selected_element}", expan
 
     if st.session_state.selected_element == "🌍 Global Setup":
         pname = st.text_input("Project Name", value=st.session_state.project_name)
+        vname = st.text_input("Variant Name", value=st.session_state.get("variant_name", "Variant 1"))
         freq = st.number_input("Center Frequency $f$ (Hz)", min_value=10.0, max_value=20000.0, value=float(st.session_state.freq), step=100.0)
         rho0 = st.number_input("Air Density $\\rho_0$ (kg/m³)", value=float(st.session_state.rho0), format="%.3f")
         c0 = st.number_input("Speed of Sound $c_0$ (m/s)", value=float(st.session_state.c0), format="%.1f")
         
         # Sync visual inputs with backend state
         st.session_state.project_name = pname
+        st.session_state.variant_name = vname
         st.session_state.freq = freq
         st.session_state.rho0 = rho0
         st.session_state.c0 = c0
@@ -495,13 +498,13 @@ with tab_file:
     with f_col1:
         st.markdown("**Save Project locally**")
         current_state_dict = {
-            "global": {"project_name": project_name, "freq": freq, "rho0": rho0, "c0": c0},
+            "global": {"project_name": project_name, "variant_name": st.session_state.get("variant_name", "Variant 1"), "freq": freq, "rho0": rho0, "c0": c0},
             "elements": st.session_state.elements,
             "junctions": st.session_state.junctions
         }
         json_string = json.dumps(current_state_dict, indent=2)
         
-        p_name_clean = project_name.replace(" ", "_")
+        p_name_clean = f"{project_name.replace(' ', '_')}_{st.session_state.get('variant_name', 'Variant 1').replace(' ', '_')}"
         st.download_button(
             label=f"⬇️ Download `{p_name_clean}.json`",
             data=json_string,
@@ -530,12 +533,15 @@ with tab_file:
         with fc_col1:
             st.markdown("**Save Project to Cloud**")
             cloud_save_name = st.text_input("Cloud Project Name", value=project_name)
+            variant_save_name = st.text_input("Cloud Variant Name", value=st.session_state.get("variant_name", "Variant 1"))
             if st.button("☁️ Save to Firebase", use_container_width=True):
                 with st.spinner("Saving to Firestore..."):
                     try:
-                        doc_ref = db.collection("sea_projects").document(cloud_save_name)
+                        project_ref = db.collection("sea_projects").document(cloud_save_name)
+                        project_ref.set({"exists": True}, merge=True)
+                        doc_ref = project_ref.collection("variants").document(variant_save_name)
                         doc_ref.set(current_state_dict)
-                        st.success(f"Project '{cloud_save_name}' saved to Firebase!")
+                        st.success(f"Variant '{variant_save_name}' saved to Project '{cloud_save_name}'!")
                     except Exception as e:
                         st.error(f"Failed to save to Firebase: {e}")
                         
@@ -552,70 +558,81 @@ with tab_file:
             if project_ids:
                 selected_cloud_project = st.selectbox("Select Project", project_ids)
                 
-                cl_load, cl_del = st.columns(2)
-                
-                with cl_load:
-                    if st.button("☁️ Load from Firebase", use_container_width=True):
-                        with st.spinner("Loading from Firestore..."):
-                            try:
-                                doc_ref = db.collection("sea_projects").document(selected_cloud_project)
-                                doc = doc_ref.get()
-                                if doc.exists:
-                                    loaded_data = doc.to_dict()
-                                    # Load Global parameters
-                                    if "global" in loaded_data:
-                                        for k, v in loaded_data["global"].items():
-                                            if k in st.session_state:
-                                                 st.session_state[k] = float(v) if isinstance(v, (int, float)) else str(v)
-                                    
-                                    # Load elements array
-                                    if "elements" in loaded_data:
-                                        st.session_state.elements = loaded_data["elements"]
+                try:
+                    variant_docs = db.collection("sea_projects").document(selected_cloud_project).collection("variants").stream()
+                    variant_ids = [doc.id for doc in variant_docs]
+                except Exception as e:
+                    variant_ids = []
+                    
+                if variant_ids:
+                    selected_variant = st.selectbox("Select Variant", variant_ids)
+                    
+                    cl_load, cl_del = st.columns(2)
+                    
+                    with cl_load:
+                        if st.button("☁️ Load from Firebase", use_container_width=True):
+                            with st.spinner("Loading from Firestore..."):
+                                try:
+                                    doc_ref = db.collection("sea_projects").document(selected_cloud_project).collection("variants").document(selected_variant)
+                                    doc = doc_ref.get()
+                                    if doc.exists:
+                                        loaded_data = doc.to_dict()
+                                        # Load Global parameters
+                                        if "global" in loaded_data:
+                                            for k, v in loaded_data["global"].items():
+                                                if k in st.session_state:
+                                                     st.session_state[k] = float(v) if isinstance(v, (int, float)) else str(v)
                                         
-                                        valid_names = [el["name"] for el in st.session_state.elements]
-                                        if st.session_state.get("selected_element") not in valid_names and st.session_state.get("selected_element") != "🌍 Global Setup":
-                                             st.session_state.selected_element = "🌍 Global Setup"
+                                        # Load elements array
+                                        if "elements" in loaded_data:
+                                            st.session_state.elements = loaded_data["elements"]
+                                            
+                                            valid_names = [el["name"] for el in st.session_state.elements]
+                                            if st.session_state.get("selected_element") not in valid_names and st.session_state.get("selected_element") != "🌍 Global Setup":
+                                                 st.session_state.selected_element = "🌍 Global Setup"
 
-                                    if "junctions" in loaded_data:
-                                        st.session_state.junctions = loaded_data["junctions"]
+                                        if "junctions" in loaded_data:
+                                            st.session_state.junctions = loaded_data["junctions"]
+                                            
+                                        # Update counters
+                                        max_c_id, max_w_id, max_j_id = 0, 0, 0
+                                        for el in st.session_state.elements:
+                                            if el["id"].startswith("c_"):
+                                                try: max_c_id = max(max_c_id, int(el["id"].split("_")[1]))
+                                                except: pass
+                                            elif el["id"].startswith("w_"):
+                                                try: max_w_id = max(max_w_id, int(el["id"].split("_")[1]))
+                                                except: pass
+                                                
+                                        for j in st.session_state.junctions:
+                                            if j["id"].startswith("j_"):
+                                                try: max_j_id = max(max_j_id, int(j["id"].split("_")[1]))
+                                                except: pass
+                                                
+                                        st.session_state.cavity_id_counter = max_c_id + 1
+                                        st.session_state.wall_id_counter = max_w_id + 1
+                                        st.session_state.junction_id_counter = max_j_id + 1
                                         
-                                    # Update counters
-                                    max_c_id, max_w_id, max_j_id = 0, 0, 0
-                                    for el in st.session_state.elements:
-                                        if el["id"].startswith("c_"):
-                                            try: max_c_id = max(max_c_id, int(el["id"].split("_")[1]))
-                                            except: pass
-                                        elif el["id"].startswith("w_"):
-                                            try: max_w_id = max(max_w_id, int(el["id"].split("_")[1]))
-                                            except: pass
-                                            
-                                    for j in st.session_state.junctions:
-                                        if j["id"].startswith("j_"):
-                                            try: max_j_id = max(max_j_id, int(j["id"].split("_")[1]))
-                                            except: pass
-                                            
-                                    st.session_state.cavity_id_counter = max_c_id + 1
-                                    st.session_state.wall_id_counter = max_w_id + 1
-                                    st.session_state.junction_id_counter = max_j_id + 1
-                                    
-                                    st.success(f"Project '{selected_cloud_project}' loaded via Firebase!")
+                                        st.success(f"Variant '{selected_variant}' loaded via Firebase!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error("Variant not found in DB.")
+                                except Exception as e:
+                                    st.error(f"Error loading from Firebase: {e}")
+                    
+                    with cl_del:
+                        if st.button("🗑️ Delete Variant", type="primary", use_container_width=True):
+                            with st.spinner("Deleting from Firestore..."):
+                                try:
+                                    db.collection("sea_projects").document(selected_cloud_project).collection("variants").document(selected_variant).delete()
+                                    st.success(f"Variant '{selected_variant}' deleted successfully from Cloud!")
                                     time.sleep(1)
                                     st.rerun()
-                                else:
-                                    st.error("Project not found in DB.")
-                            except Exception as e:
-                                st.error(f"Error loading from Firebase: {e}")
-                
-                with cl_del:
-                    if st.button("🗑️ Delete Project File", type="primary", use_container_width=True):
-                        with st.spinner("Deleting from Firestore..."):
-                            try:
-                                db.collection("sea_projects").document(selected_cloud_project).delete()
-                                st.success(f"Project file '{selected_cloud_project}' deleted successfully from Cloud!")
-                                time.sleep(1)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error deleting project file from Firebase: {e}")
+                                except Exception as e:
+                                    st.error(f"Error deleting variant from Firebase: {e}")
+                else:
+                    st.info("No variants found in this project.")
             else:
                 st.info("No projects found in Firebase Database.")
 
